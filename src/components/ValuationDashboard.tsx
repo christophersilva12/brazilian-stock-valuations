@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { FieldWithTooltip } from '@/components/FieldWithTooltip';
@@ -18,6 +18,27 @@ import { Calculator, History, BarChart3, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 type MethodKey = 'graham' | 'barsi' | 'dcf' | 'lynch';
+
+export interface Quotes {
+  symbol: string
+  name: string
+  exchange: string
+  mic_code: string
+  currency: string
+  datetime: string
+  timestamp: number
+  last_quote_at: number
+  open: string
+  high: string
+  low: string
+  close: string
+  volume: string
+  previous_close: string
+  change: string
+  percent_change: string
+  average_volume: string
+  is_market_open: boolean
+}
 
 export default function ValuationDashboard() {
   const [ticker, setTicker] = useState('');
@@ -50,6 +71,30 @@ export default function ValuationDashboard() {
 
   // Results
   const [results, setResults] = useState<{ method: string; result: ValuationResult; currentPrice: number }[]>([]);
+
+
+  const handleGetData = async () => {
+    const input = ticker.trim().toUpperCase();
+    if (!input) return;
+    let cancelled = false;
+    try {
+      const res = await fetch(
+        `https://api.twelvedata.com/quote?symbol=${input}&apikey=${import.meta.env.VITE_TWELVEDATA_KEY}`
+      );
+      const quote = await res.json();
+      
+      if (cancelled || !quote) return;
+      const { name:longName, symbol, open  } = quote as Quotes;
+      const name = longName || '';
+
+      if (name) setCompany((prev) => prev || name);
+      const price = parseFloat(open);
+      if (price !== undefined) setCurrentPrice(String(price));
+    } catch (error) {
+      console.error('Error fetching ticker data:', error);
+      toast.error('Não foi possível buscar dados do ticker.');
+    }
+  };
 
   const calculate = useCallback(() => {
     const price = parseFloat(currentPrice);
@@ -203,6 +248,7 @@ export default function ValuationDashboard() {
                   placeholder="PETR4"
                   value={ticker}
                   onChange={(v) => setTicker(v.toUpperCase())}
+                  onBlur={handleGetData}
                 />
                 <FieldWithTooltip
                   id="company"
