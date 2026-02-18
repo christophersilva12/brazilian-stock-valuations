@@ -18,6 +18,7 @@ interface FieldWithTooltipProps {
   onChange: (value: string) => void;
   suffix?: string;
   disabled?: boolean;
+  onBlur?: () => void;
 }
 
 export function FieldWithTooltip({
@@ -31,6 +32,7 @@ export function FieldWithTooltip({
   onChange,
   suffix,
   disabled,
+  onBlur,
 }: FieldWithTooltipProps) {
   return (
     <div className="space-y-1.5">
@@ -60,6 +62,7 @@ export function FieldWithTooltip({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           disabled={disabled}
           className="bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 font-mono"
         />
