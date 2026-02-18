@@ -22,6 +22,14 @@ export interface DCFInput {
   safetyMargin: number;
 }
 
+export interface PeterLynchInput {
+  lpa: number;
+  growthRate: number; // 0-100
+  plRatio?: number; // optional P/L
+  currentPrice: number;
+  safetyMargin: number;
+}
+
 export interface ValuationResult {
   intrinsicValue: number;
   ceilingPrice: number;
@@ -110,12 +118,41 @@ export function calculateDCF(input: DCFInput): ValuationResult {
   };
 }
 
+export function calculatePeterLynch(input: PeterLynchInput): ValuationResult & { peg?: number; pegClassification?: string } {
+  const { lpa, growthRate, plRatio, currentPrice, safetyMargin } = input;
+  const intrinsicValue = lpa * growthRate;
+  const ceilingPrice = intrinsicValue * (1 - safetyMargin / 100);
+  const safetyMarginPercent = intrinsicValue > 0
+    ? ((intrinsicValue - currentPrice) / intrinsicValue) * 100
+    : 0;
+  const upsidePercent = currentPrice > 0
+    ? ((ceilingPrice - currentPrice) / currentPrice) * 100
+    : 0;
+
+  let peg: number | undefined;
+  let pegClassification: string | undefined;
+  if (plRatio && growthRate > 0) {
+    peg = plRatio / growthRate;
+    pegClassification = peg < 1 ? 'Barato' : peg <= 1.5 ? 'Justo' : 'Caro';
+  }
+
+  return {
+    intrinsicValue,
+    ceilingPrice,
+    safetyMarginPercent,
+    upsidePercent,
+    signal: getSignal(currentPrice, ceilingPrice),
+    method: 'Peter Lynch (PEG)',
+    peg,
+    pegClassification,
+  };
+}
+
 function getSignal(currentPrice: number, ceilingPrice: number): 'comprar' | 'neutro' | 'caro' {
   if (currentPrice <= ceilingPrice * 0.95) return 'comprar';
   if (currentPrice <= ceilingPrice * 1.1) return 'neutro';
   return 'caro';
 }
-
 export interface SavedAnalysis {
   id: string;
   ticker: string;

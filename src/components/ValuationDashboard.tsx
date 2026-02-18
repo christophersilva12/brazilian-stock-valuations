@@ -5,17 +5,19 @@ import { FieldWithTooltip } from '@/components/FieldWithTooltip';
 import { ResultCard } from '@/components/ResultCard';
 import { ComparisonChart } from '@/components/ComparisonChart';
 import { HistoryPanel } from '@/components/HistoryPanel';
+import { MethodInfoCard } from '@/components/MethodInfoCard';
 import {
   calculateGraham,
   calculateBarsi,
   calculateDCF,
+  calculatePeterLynch,
   saveAnalysis,
   ValuationResult,
 } from '@/lib/valuation';
 import { Calculator, History, BarChart3, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
-type MethodKey = 'graham' | 'barsi' | 'dcf';
+type MethodKey = 'graham' | 'barsi' | 'dcf' | 'lynch';
 
 export default function ValuationDashboard() {
   const [ticker, setTicker] = useState('');
@@ -40,6 +42,11 @@ export default function ValuationDashboard() {
   const [discountRate, setDiscountRate] = useState('12');
   const [projectionYears, setProjectionYears] = useState('10');
   const [totalShares, setTotalShares] = useState('');
+
+  // Lynch fields
+  const [lynchLpa, setLynchLpa] = useState('');
+  const [lynchGrowth, setLynchGrowth] = useState('');
+  const [lynchPL, setLynchPL] = useState('');
 
   // Results
   const [results, setResults] = useState<{ method: string; result: ValuationResult; currentPrice: number }[]>([]);
@@ -84,6 +91,16 @@ export default function ValuationDashboard() {
       }
     }
 
+    if (activeMethod === 'lynch' || activeMethod === 'all' as any) {
+      const l = parseFloat(lynchLpa);
+      const g = parseFloat(lynchGrowth);
+      const pl = parseFloat(lynchPL) || undefined;
+      if (l && g) {
+        const r = calculatePeterLynch({ lpa: l, growthRate: g, plRatio: pl, currentPrice: price, safetyMargin: margin });
+        newResults.push({ method: 'lynch', result: r, currentPrice: price });
+      }
+    }
+
     if (newResults.length === 0) {
       toast.error('Preencha todos os campos do método selecionado.');
       return;
@@ -91,7 +108,7 @@ export default function ValuationDashboard() {
 
     setResults(newResults);
     toast.success('Cálculo realizado com sucesso!');
-  }, [activeMethod, currentPrice, safetyMargin, lpa, vpa, annualDividend, desiredDY, fcf, growthRate, discountRate, projectionYears, totalShares]);
+  }, [activeMethod, currentPrice, safetyMargin, lpa, vpa, annualDividend, desiredDY, fcf, growthRate, discountRate, projectionYears, totalShares, lynchLpa, lynchGrowth, lynchPL]);
 
   const handleSave = () => {
     if (results.length === 0) return;
@@ -120,6 +137,9 @@ export default function ValuationDashboard() {
     setAnnualDividend('');
     setFcf('');
     setTotalShares('');
+    setLynchLpa('');
+    setLynchGrowth('');
+    setLynchPL('');
   };
 
   return (
@@ -226,6 +246,9 @@ export default function ValuationDashboard() {
                   <TabsTrigger value="dcf" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                     DCF
                   </TabsTrigger>
+                  <TabsTrigger value="lynch" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                    Lynch
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="graham" className="glass-card p-6 space-y-4 mt-3">
@@ -251,6 +274,7 @@ export default function ValuationDashboard() {
                     onChange={setVpa}
                     suffix="R$"
                   />
+                  <MethodInfoCard method="graham" />
                 </TabsContent>
 
                 <TabsContent value="barsi" className="glass-card p-6 space-y-4 mt-3">
@@ -275,6 +299,7 @@ export default function ValuationDashboard() {
                     onChange={setDesiredDY}
                     suffix="%"
                   />
+                  <MethodInfoCard method="barsi" />
                 </TabsContent>
 
                 <TabsContent value="dcf" className="glass-card p-6 space-y-4 mt-3">
@@ -325,6 +350,42 @@ export default function ValuationDashboard() {
                     value={totalShares}
                     onChange={setTotalShares}
                   />
+                  <MethodInfoCard method="dcf" />
+                </TabsContent>
+
+                <TabsContent value="lynch" className="glass-card p-6 space-y-4 mt-3">
+                  <h3 className="text-sm font-semibold">Peter Lynch — Crescimento (PEG)</h3>
+                  <p className="text-xs text-muted-foreground">Preço Justo = LPA × Taxa de Crescimento</p>
+                  <FieldWithTooltip
+                    id="lynch-lpa"
+                    label="LPA (Lucro por Ação)"
+                    tooltip="Lucro líquido dividido pelo número total de ações da empresa."
+                    source="Investidor10, Status Invest, Fundamentus"
+                    placeholder="5.20"
+                    value={lynchLpa}
+                    onChange={setLynchLpa}
+                    suffix="R$"
+                  />
+                  <FieldWithTooltip
+                    id="lynch-growth"
+                    label="Taxa de Crescimento Anual do Lucro"
+                    tooltip="Crescimento médio anual do lucro nos últimos anos ou projeção futura."
+                    source="Investidor10 (aba crescimento), Status Invest"
+                    placeholder="15"
+                    value={lynchGrowth}
+                    onChange={setLynchGrowth}
+                    suffix="%"
+                  />
+                  <FieldWithTooltip
+                    id="lynch-pl"
+                    label="P/L Atual (opcional)"
+                    tooltip="Relação entre preço da ação e lucro por ação. Usado para calcular o PEG automaticamente."
+                    source="Investidor10, Fundamentus, Status Invest"
+                    placeholder="12.5"
+                    value={lynchPL}
+                    onChange={setLynchPL}
+                  />
+                  <MethodInfoCard method="lynch" />
                 </TabsContent>
               </Tabs>
 
