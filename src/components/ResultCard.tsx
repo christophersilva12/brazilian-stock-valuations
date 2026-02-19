@@ -1,5 +1,6 @@
 import { ValuationResult } from '@/lib/valuation';
 import { TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { useI18n } from '@/i18n/i18n';
 
 interface ResultCardProps {
   result: ValuationResult;
@@ -8,19 +9,20 @@ interface ResultCardProps {
 }
 
 export function ResultCard({ result, currentPrice, ticker }: ResultCardProps) {
+  const { t } = useI18n();
   const signalConfig = {
     comprar: {
-      label: 'COMPRAR',
+      label: t('result.signal.buy'),
       className: 'bg-primary/10 text-primary border-primary/30 glow-green',
       icon: TrendingUp,
     },
     neutro: {
-      label: 'NEUTRO',
+      label: t('result.signal.neutral'),
       className: 'bg-warning/10 text-warning border-warning/30 glow-amber',
       icon: Minus,
     },
     caro: {
-      label: 'CARO',
+      label: t('result.signal.expensive'),
       className: 'bg-destructive/10 text-destructive border-destructive/30 glow-red',
       icon: TrendingDown,
     },
@@ -47,29 +49,29 @@ export function ResultCard({ result, currentPrice, ticker }: ResultCardProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <MetricBox
-          label="Cotação Atual"
+          label={t('result.metric.currentPrice')}
           value={`R$ ${currentPrice.toFixed(2)}`}
           className="text-foreground"
         />
         <MetricBox
-          label="Valor Intrínseco"
+          label={t('result.metric.intrinsicValue')}
           value={`R$ ${result.intrinsicValue.toFixed(2)}`}
           className="text-accent"
         />
         <MetricBox
-          label="Preço Teto"
+          label={t('result.metric.ceilingPrice')}
           value={`R$ ${result.ceilingPrice.toFixed(2)}`}
           className={result.ceilingPrice > currentPrice ? 'text-primary' : 'text-destructive'}
         />
         <MetricBox
-          label="Margem de Segurança"
+          label={t('result.metric.safetyMargin')}
           value={`${result.safetyMarginPercent.toFixed(1)}%`}
           className={result.safetyMarginPercent > 0 ? 'text-primary' : 'text-destructive'}
         />
       </div>
 
       <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border/30">
-        <span className="text-sm text-muted-foreground">Potencial de Valorização</span>
+        <span className="text-sm text-muted-foreground">{t('result.potential')}</span>
         <div className={`flex items-center gap-1 font-mono font-semibold text-lg ${isPositive ? 'text-primary' : 'text-destructive'}`}>
           {isPositive ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownRight className="h-5 w-5" />}
           {isPositive ? '+' : ''}{result.upsidePercent.toFixed(1)}%
