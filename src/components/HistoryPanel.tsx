@@ -2,12 +2,14 @@ import { SavedAnalysis, getAnalyses, deleteAnalysis } from '@/lib/valuation';
 import { Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
+import { useI18n } from '@/i18n/i18n';
 
 interface HistoryPanelProps {
   refreshKey: number;
 }
 
 export function HistoryPanel({ refreshKey }: HistoryPanelProps) {
+  const { t, lang } = useI18n();
   const [analyses, setAnalyses] = useState<SavedAnalysis[]>([]);
 
   useEffect(() => {
@@ -22,9 +24,9 @@ export function HistoryPanel({ refreshKey }: HistoryPanelProps) {
   if (analyses.length === 0) {
     return (
       <div className="glass-card p-8 text-center">
-        <p className="text-muted-foreground text-sm">Nenhuma análise salva ainda.</p>
+        <p className="text-muted-foreground text-sm">{t('history.empty.title')}</p>
         <p className="text-muted-foreground/60 text-xs mt-1">
-          Realize um cálculo e salve para ver o histórico aqui.
+          {t('history.empty.subtitle')}
         </p>
       </div>
     );
@@ -55,7 +57,7 @@ export function HistoryPanel({ refreshKey }: HistoryPanelProps) {
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                 <span>R$ {a.currentPrice.toFixed(2)}</span>
-                <span>→ Teto: R$ {a.result.ceilingPrice.toFixed(2)}</span>
+                <span>→ {t('history.ceiling')}: R$ {a.result.ceilingPrice.toFixed(2)}</span>
                 <span className={signalClass[a.result.signal]}>
                   {a.result.upsidePercent > 0 ? '+' : ''}{a.result.upsidePercent.toFixed(1)}%
                 </span>
@@ -64,7 +66,7 @@ export function HistoryPanel({ refreshKey }: HistoryPanelProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground/60 hidden sm:block">
-              {new Date(a.date).toLocaleDateString('pt-BR')}
+              {new Date(a.date).toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : 'pt-BR')}
             </span>
             <Button
               variant="ghost"
