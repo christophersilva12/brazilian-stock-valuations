@@ -54,7 +54,7 @@ export default function ValuationDashboard() {
   const [vpa, setVpa] = useState('');
 
   // Barsi fields
-  const [annualDividend, setAnnualDividend] = useState('');
+  const [currentDY, setCurrentDY] = useState('');
   const [desiredDY, setDesiredDY] = useState('6');
 
   // DCF fields
@@ -116,10 +116,12 @@ export default function ValuationDashboard() {
     }
 
     if (activeMethod === 'barsi' || activeMethod === 'all' as any) {
-      const div = parseFloat(annualDividend);
-      const dy = parseFloat(desiredDY);
-      if (div && dy) {
-        const r = calculateBarsi({ annualDividend: div, desiredDY: dy, currentPrice: price, safetyMargin: margin });
+      console.log(currentDY, desiredDY);
+      const dyAtual = parseFloat(currentDY);
+      const dyDesejado = parseFloat(desiredDY);
+      console.log(dyAtual, dyDesejado);
+      if (dyAtual && dyDesejado) {
+        const r = calculateBarsi({ currentDY: dyAtual, desiredDY: dyDesejado, currentPrice: price, safetyMargin: margin });
         newResults.push({ method: 'barsi', result: r, currentPrice: price });
       }
     }
@@ -153,7 +155,7 @@ export default function ValuationDashboard() {
 
     setResults(newResults);
     toast.success('Cálculo realizado com sucesso!');
-  }, [activeMethod, currentPrice, safetyMargin, lpa, vpa, annualDividend, desiredDY, fcf, growthRate, discountRate, projectionYears, totalShares, lynchLpa, lynchGrowth, lynchPL]);
+  }, [activeMethod, currentPrice, safetyMargin, lpa, vpa, currentDY, desiredDY, fcf, growthRate, discountRate, projectionYears, totalShares, lynchLpa, lynchGrowth, lynchPL]);
 
   const handleSave = () => {
     if (results.length === 0) return;
@@ -179,7 +181,7 @@ export default function ValuationDashboard() {
     setCurrentPrice('');
     setLpa('');
     setVpa('');
-    setAnnualDividend('');
+    setCurrentDY('');
     setFcf('');
     setTotalShares('');
     setLynchLpa('');
@@ -325,16 +327,16 @@ export default function ValuationDashboard() {
 
                 <TabsContent value="barsi" className="glass-card p-6 space-y-4 mt-3">
                   <h3 className="text-sm font-semibold">Método Luiz Barsi</h3>
-                  <p className="text-xs text-muted-foreground">Preço Teto = Dividendo Anual / DY desejado</p>
+                  <p className="text-xs text-muted-foreground">Preço Teto = (DY atual / DY desejado) × Cotação</p>
                   <FieldWithTooltip
                     id="dividend"
-                    label="Dividendo Anual por Ação"
-                    tooltip="Total de dividendos pagos nos últimos 12 meses por ação."
-                    source="Investidor10, Status Invest, RI da empresa"
-                    placeholder="3.50"
-                    value={annualDividend}
-                    onChange={setAnnualDividend}
-                    suffix="R$"
+                    label="Dividend Yield Atual"
+                    tooltip="Dividend Yield atual da ação em percentual."
+                    source="Investidor10, Status Invest, Google Finance"
+                    placeholder="8"
+                    value={currentDY}
+                    onChange={setCurrentDY}
+                    suffix="%"
                   />
                   <FieldWithTooltip
                     id="dy"

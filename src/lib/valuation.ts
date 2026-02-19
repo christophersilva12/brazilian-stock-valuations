@@ -6,7 +6,7 @@ export interface GrahamInput {
 }
 
 export interface BarsiInput {
-  annualDividend: number;
+  currentDY: number; // 0-100
   desiredDY: number; // 0-100
   currentPrice: number;
   safetyMargin: number;
@@ -62,8 +62,12 @@ export function calculateGraham(input: GrahamInput): ValuationResult {
 }
 
 export function calculateBarsi(input: BarsiInput): ValuationResult {
-  const { annualDividend, desiredDY, currentPrice, safetyMargin } = input;
-  const intrinsicValue = desiredDY > 0 ? annualDividend / (desiredDY / 100) : 0;
+  const { currentDY, desiredDY, currentPrice, safetyMargin } = input;
+  console.log(currentDY, desiredDY, currentPrice, safetyMargin);
+  const intrinsicValue =
+    desiredDY > 0 && currentDY > 0
+      ? currentPrice * (currentDY / desiredDY)
+      : 0;
   const ceilingPrice = intrinsicValue * (1 - safetyMargin / 100);
   const safetyMarginPercent = intrinsicValue > 0
     ? ((intrinsicValue - currentPrice) / intrinsicValue) * 100
