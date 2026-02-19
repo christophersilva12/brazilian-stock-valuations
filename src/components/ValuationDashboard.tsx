@@ -9,6 +9,7 @@ import { MethodInfoCard } from '@/components/MethodInfoCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useI18n } from '@/i18n/i18n';
 import type { Lang } from '@/i18n/translations';
+import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
 import {
   calculateGraham,
   calculateBarsi,
@@ -17,7 +18,7 @@ import {
   saveAnalysis,
   ValuationResult,
 } from '@/lib/valuation';
-import { Calculator, History, BarChart3, Save, RotateCcw } from 'lucide-react';
+import { Calculator, History, BarChart3, Save, RotateCcw, Menu } from 'lucide-react';
 import { toast } from 'sonner';
 
 type MethodKey = 'graham' | 'barsi' | 'dcf' | 'lynch';
@@ -197,7 +198,7 @@ export default function ValuationDashboard() {
     <div className="min-h-screen bg-background gradient-mesh">
       {/* Header */}
       <header className="border-b border-border/30 bg-card/30 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-row gap-3 sm:items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
               <BarChart3 className="h-4 w-4 text-primary" />
@@ -207,7 +208,7 @@ export default function ValuationDashboard() {
               <p className="text-xs text-muted-foreground">{t('common.subtitle')}</p>
             </div>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="hidden sm:flex flex-wrap gap-2 items-center w-full sm:w-auto justify-end">
             <Button
               variant={view === 'calc' ? 'secondary' : 'ghost'}
               size="sm"
@@ -226,7 +227,7 @@ export default function ValuationDashboard() {
               <History className="h-3.5 w-3.5" />
               {t('common.historyTab')}
             </Button>
-            <div className="w-36">
+            <div className="w-full sm:w-36">
               <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Language" />
@@ -238,6 +239,53 @@ export default function ValuationDashboard() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="flex sm:hidden items-center justify-end">
+            <Drawer>
+              <DrawerTrigger>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent>
+                <DrawerHeader>
+                  <DrawerTitle>Menu</DrawerTitle>
+                </DrawerHeader>
+                <div className="p-4 space-y-3">
+                  <Button
+                    variant={view === 'calc' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setView('calc')}
+                    className="w-full justify-center gap-1.5 text-xs"
+                  >
+                    <Calculator className="h-3.5 w-3.5" />
+                    {t('common.calculateTab')}
+                  </Button>
+                  <Button
+                    variant={view === 'history' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setView('history')}
+                    className="w-full justify-center gap-1.5 text-xs"
+                  >
+                    <History className="h-3.5 w-3.5" />
+                    {t('common.historyTab')}
+                  </Button>
+                  <div className="w-full">
+                    <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
+                      <SelectTrigger className="h-9 text-xs w-full">
+                        <SelectValue placeholder="Language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="pt">Português</SelectItem>
+                        <SelectItem value="es">Español</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DrawerFooter />
+              </DrawerContent>
+            </Drawer>
           </div>
         </div>
       </header>
