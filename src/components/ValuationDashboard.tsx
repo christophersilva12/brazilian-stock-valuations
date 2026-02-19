@@ -9,7 +9,7 @@ import { MethodInfoCard } from '@/components/MethodInfoCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useI18n } from '@/i18n/i18n';
 import type { Lang } from '@/i18n/translations';
-import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter } from '@/components/ui/drawer';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import {
   calculateGraham,
   calculateBarsi,
@@ -241,16 +241,16 @@ export default function ValuationDashboard() {
             </div>
           </div>
           <div className="flex sm:hidden items-center justify-end">
-            <Drawer>
-              <DrawerTrigger>
+            <Sheet>
+              <SheetTrigger>
                 <Button variant="ghost" size="icon" className="h-9 w-9">
                   <Menu className="h-5 w-5" />
                 </Button>
-              </DrawerTrigger>
-              <DrawerContent>
-                <DrawerHeader>
-                  <DrawerTitle>Menu</DrawerTitle>
-                </DrawerHeader>
+              </SheetTrigger>
+              <SheetContent side="right">
+                <SheetHeader>
+                  <SheetTitle>Menu</SheetTitle>
+                </SheetHeader>
                 <div className="p-4 space-y-3">
                   <Button
                     variant={view === 'calc' ? 'secondary' : 'ghost'}
@@ -283,9 +283,9 @@ export default function ValuationDashboard() {
                     </Select>
                   </div>
                 </div>
-                <DrawerFooter />
-              </DrawerContent>
-            </Drawer>
+                <SheetFooter />
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </header>
