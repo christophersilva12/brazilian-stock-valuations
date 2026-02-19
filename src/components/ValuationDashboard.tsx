@@ -233,8 +233,8 @@ export default function ValuationDashboard() {
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
                   <SelectItem value="pt">Português</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
                   <SelectItem value="es">Español</SelectItem>
                 </SelectContent>
               </Select>
@@ -276,8 +276,8 @@ export default function ValuationDashboard() {
                         <SelectValue placeholder="Language" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="en">English</SelectItem>
                         <SelectItem value="pt">Português</SelectItem>
+                        <SelectItem value="en">English</SelectItem>
                         <SelectItem value="es">Español</SelectItem>
                       </SelectContent>
                     </Select>
