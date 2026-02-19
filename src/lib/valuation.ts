@@ -63,7 +63,7 @@ export function calculateGraham(input: GrahamInput): ValuationResult {
 
 export function calculateBarsi(input: BarsiInput): ValuationResult {
   const { currentDY, desiredDY, currentPrice, safetyMargin } = input;
-  console.log(currentDY, desiredDY, currentPrice, safetyMargin);
+
   const intrinsicValue =
     desiredDY > 0 && currentDY > 0
       ? currentPrice * (currentDY / desiredDY)

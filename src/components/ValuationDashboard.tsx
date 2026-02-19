@@ -6,6 +6,9 @@ import { ResultCard } from '@/components/ResultCard';
 import { ComparisonChart } from '@/components/ComparisonChart';
 import { HistoryPanel } from '@/components/HistoryPanel';
 import { MethodInfoCard } from '@/components/MethodInfoCard';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useI18n } from '@/i18n/i18n';
+import type { Lang } from '@/i18n/translations';
 import {
   calculateGraham,
   calculateBarsi,
@@ -41,6 +44,7 @@ export interface Quotes {
 }
 
 export default function ValuationDashboard() {
+  const { t, lang, setLang } = useI18n();
   const [ticker, setTicker] = useState('');
   const [company, setCompany] = useState('');
   const [currentPrice, setCurrentPrice] = useState('');
@@ -76,7 +80,7 @@ export default function ValuationDashboard() {
   const handleGetData = async () => {
     const input = ticker.trim().toUpperCase();
     if (!input) return;
-    let cancelled = false;
+    const cancelled = false;
     try {
       const res = await fetch(
         `https://api.twelvedata.com/quote?symbol=${input}&apikey=${import.meta.env.VITE_TWELVEDATA_KEY}`
@@ -92,7 +96,7 @@ export default function ValuationDashboard() {
       if (price !== undefined) setCurrentPrice(String(price));
     } catch (error) {
       console.error('Error fetching ticker data:', error);
-      toast.error('Não foi possível buscar dados do ticker.');
+      toast.error(t('toast.fetchError'));
     }
   };
 
@@ -100,13 +104,13 @@ export default function ValuationDashboard() {
     const price = parseFloat(currentPrice);
     const margin = parseFloat(safetyMargin);
     if (!price || !margin) {
-      toast.error('Preencha cotação atual e margem de segurança.');
+      toast.error(t('toast.fillPriceMargin'));
       return;
     }
 
     const newResults: typeof results = [];
 
-    if (activeMethod === 'graham' || activeMethod === 'all' as any) {
+    if (activeMethod === 'graham') {
       const l = parseFloat(lpa);
       const v = parseFloat(vpa);
       if (l && v) {
@@ -115,7 +119,7 @@ export default function ValuationDashboard() {
       }
     }
 
-    if (activeMethod === 'barsi' || activeMethod === 'all' as any) {
+    if (activeMethod === 'barsi') {
       console.log(currentDY, desiredDY);
       const dyAtual = parseFloat(currentDY);
       const dyDesejado = parseFloat(desiredDY);
@@ -126,7 +130,7 @@ export default function ValuationDashboard() {
       }
     }
 
-    if (activeMethod === 'dcf' || activeMethod === 'all' as any) {
+    if (activeMethod === 'dcf') {
       const f = parseFloat(fcf);
       const g = parseFloat(growthRate);
       const d = parseFloat(discountRate);
@@ -138,7 +142,7 @@ export default function ValuationDashboard() {
       }
     }
 
-    if (activeMethod === 'lynch' || activeMethod === 'all' as any) {
+    if (activeMethod === 'lynch') {
       const l = parseFloat(lynchLpa);
       const g = parseFloat(lynchGrowth);
       const pl = parseFloat(lynchPL) || undefined;
@@ -149,13 +153,13 @@ export default function ValuationDashboard() {
     }
 
     if (newResults.length === 0) {
-      toast.error('Preencha todos os campos do método selecionado.');
+      toast.error(t('toast.fillMethodFields'));
       return;
     }
 
     setResults(newResults);
-    toast.success('Cálculo realizado com sucesso!');
-  }, [activeMethod, currentPrice, safetyMargin, lpa, vpa, currentDY, desiredDY, fcf, growthRate, discountRate, projectionYears, totalShares, lynchLpa, lynchGrowth, lynchPL]);
+    toast.success(t('toast.calcSuccess'));
+  }, [activeMethod, currentPrice, safetyMargin, lpa, vpa, currentDY, desiredDY, fcf, growthRate, discountRate, projectionYears, totalShares, lynchLpa, lynchGrowth, lynchPL, t]);
 
   const handleSave = () => {
     if (results.length === 0) return;
@@ -171,7 +175,7 @@ export default function ValuationDashboard() {
       });
     });
     setHistoryKey((k) => k + 1);
-    toast.success('Análise salva no histórico!');
+    toast.success(t('toast.saveSuccess'));
   };
 
   const handleReset = () => {
@@ -200,10 +204,10 @@ export default function ValuationDashboard() {
             </div>
             <div>
               <h1 className="font-semibold text-base tracking-tight">ValorAção</h1>
-              <p className="text-xs text-muted-foreground">Valuation de Ações B3</p>
+              <p className="text-xs text-muted-foreground">{t('common.subtitle')}</p>
             </div>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-2 items-center">
             <Button
               variant={view === 'calc' ? 'secondary' : 'ghost'}
               size="sm"
@@ -211,7 +215,7 @@ export default function ValuationDashboard() {
               className="gap-1.5 text-xs"
             >
               <Calculator className="h-3.5 w-3.5" />
-              Calcular
+              {t('common.calculateTab')}
             </Button>
             <Button
               variant={view === 'history' ? 'secondary' : 'ghost'}
@@ -220,8 +224,20 @@ export default function ValuationDashboard() {
               className="gap-1.5 text-xs"
             >
               <History className="h-3.5 w-3.5" />
-              Histórico
+              {t('common.historyTab')}
             </Button>
+            <div className="w-36">
+              <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="pt">Português</SelectItem>
+                  <SelectItem value="es">Español</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </header>
@@ -239,43 +255,43 @@ export default function ValuationDashboard() {
               {/* Common fields */}
               <div className="glass-card p-6 space-y-4">
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Dados da Ação
+                  {t('common.stockData')}
                 </h2>
                 <FieldWithTooltip
                   id="ticker"
-                  label="Ticker"
-                  tooltip="Código da ação na bolsa brasileira (ex: PETR4, BBAS3)"
+                  label={t('fields.ticker.label')}
+                  tooltip={t('fields.ticker.tooltip')}
                   source="B3, Investidor10, Google Finance"
                   type="text"
-                  placeholder="PETR4"
+                  placeholder={t('fields.ticker.placeholder')}
                   value={ticker}
                   onChange={(v) => setTicker(v.toUpperCase())}
                   onBlur={handleGetData}
                 />
                 <FieldWithTooltip
                   id="company"
-                  label="Empresa"
-                  tooltip="Nome da empresa"
+                  label={t('fields.company.label')}
+                  tooltip={t('fields.company.tooltip')}
                   type="text"
-                  placeholder="Petrobras"
+                  placeholder={t('fields.company.placeholder')}
                   value={company}
                   onChange={setCompany}
                 />
                 <FieldWithTooltip
                   id="price"
-                  label="Cotação Atual"
-                  tooltip="Preço atual da ação no mercado"
+                  label={t('fields.price.label')}
+                  tooltip={t('fields.price.tooltip')}
                   source="B3, Google Finance, Investidor10"
-                  placeholder="35.50"
+                  placeholder={t('fields.price.placeholder')}
                   value={currentPrice}
                   onChange={setCurrentPrice}
                   suffix="R$"
                 />
                 <FieldWithTooltip
                   id="margin"
-                  label="Margem de Segurança"
-                  tooltip="Percentual de desconto desejado pelo investidor sobre o valor intrínseco. Geralmente entre 20% e 50%."
-                  placeholder="25"
+                  label={t('fields.margin.label')}
+                  tooltip={t('fields.margin.tooltip')}
+                  placeholder={t('fields.margin.placeholder')}
                   value={safetyMargin}
                   onChange={setSafetyMargin}
                   suffix="%"
@@ -286,38 +302,38 @@ export default function ValuationDashboard() {
               <Tabs value={activeMethod} onValueChange={(v) => setActiveMethod(v as MethodKey)}>
                 <TabsList className="w-full bg-secondary/30 border border-border/30">
                   <TabsTrigger value="graham" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                    Graham
+                    {t('tabs.graham')}
                   </TabsTrigger>
                   <TabsTrigger value="barsi" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                    Barsi
+                    {t('tabs.barsi')}
                   </TabsTrigger>
                   <TabsTrigger value="dcf" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                    DCF
+                    {t('tabs.dcf')}
                   </TabsTrigger>
                   <TabsTrigger value="lynch" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                    Lynch
+                    {t('tabs.lynch')}
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="graham" className="glass-card p-6 space-y-4 mt-3">
-                  <h3 className="text-sm font-semibold">Método Benjamin Graham</h3>
-                  <p className="text-xs text-muted-foreground">VI = √(22.5 × LPA × VPA)</p>
+                  <h3 className="text-sm font-semibold">{t('graham.title')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('graham.formula')}</p>
                   <FieldWithTooltip
                     id="lpa"
-                    label="LPA (Lucro por Ação)"
-                    tooltip="Lucro líquido dividido pelo número de ações. Indica quanto cada ação gerou de lucro."
-                    source="Investidor10, Fundamentus, Status Invest"
-                    placeholder="5.20"
+                    label={t('graham.lpa.label')}
+                    tooltip={t('graham.lpa.tooltip')}
+                    source={t('graham.lpa.source')}
+                    placeholder={t('graham.lpa.placeholder')}
                     value={lpa}
                     onChange={setLpa}
                     suffix="R$"
                   />
                   <FieldWithTooltip
                     id="vpa"
-                    label="VPA (Valor Patrimonial por Ação)"
-                    tooltip="Patrimônio líquido dividido pelo número de ações. Representa o valor contábil por ação."
-                    source="Investidor10 ou balanço da empresa"
-                    placeholder="28.00"
+                    label={t('graham.vpa.label')}
+                    tooltip={t('graham.vpa.tooltip')}
+                    source={t('graham.vpa.source')}
+                    placeholder={t('graham.vpa.placeholder')}
                     value={vpa}
                     onChange={setVpa}
                     suffix="R$"
@@ -326,23 +342,23 @@ export default function ValuationDashboard() {
                 </TabsContent>
 
                 <TabsContent value="barsi" className="glass-card p-6 space-y-4 mt-3">
-                  <h3 className="text-sm font-semibold">Método Luiz Barsi</h3>
-                  <p className="text-xs text-muted-foreground">Preço Teto = (DY atual / DY desejado) × Cotação</p>
+                  <h3 className="text-sm font-semibold">{t('barsi.title')}</h3>
+                  <p className="text-xs text-muted-foreground">{t('barsi.formula')}</p>
                   <FieldWithTooltip
                     id="dividend"
-                    label="Dividend Yield Atual"
-                    tooltip="Dividend Yield atual da ação em percentual."
-                    source="Investidor10, Status Invest, Google Finance"
-                    placeholder="8"
+                    label={t('barsi.currentDY.label')}
+                    tooltip={t('barsi.currentDY.tooltip')}
+                    source={t('barsi.currentDY.source')}
+                    placeholder={t('barsi.currentDY.placeholder')}
                     value={currentDY}
                     onChange={setCurrentDY}
                     suffix="%"
                   />
                   <FieldWithTooltip
                     id="dy"
-                    label="Dividend Yield Desejado"
-                    tooltip="Retorno anual desejado pelo investidor em dividendos. Geralmente entre 6% e 10%."
-                    placeholder="6"
+                    label={t('barsi.desiredDY.label')}
+                    tooltip={t('barsi.desiredDY.tooltip')}
+                    placeholder={t('barsi.desiredDY.placeholder')}
                     value={desiredDY}
                     onChange={setDesiredDY}
                     suffix="%"
@@ -441,7 +457,7 @@ export default function ValuationDashboard() {
               <div className="flex gap-2">
                 <Button onClick={calculate} className="flex-1 gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
                   <Calculator className="h-4 w-4" />
-                  Calcular Valuation
+                  {t('actions.calculate')}
                 </Button>
                 <Button variant="outline" size="icon" onClick={handleReset} className="border-border/50">
                   <RotateCcw className="h-4 w-4" />
@@ -455,7 +471,7 @@ export default function ValuationDashboard() {
                 <div className="glass-card p-16 text-center">
                   <BarChart3 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
                   <p className="text-muted-foreground text-sm">
-                    Preencha os dados e clique em "Calcular Valuation" para ver os resultados.
+                    {t('results.empty')}
                   </p>
                 </div>
               ) : (
@@ -463,7 +479,7 @@ export default function ValuationDashboard() {
                   <div className="flex justify-end">
                     <Button variant="outline" size="sm" onClick={handleSave} className="gap-1.5 text-xs border-border/50">
                       <Save className="h-3.5 w-3.5" />
-                      Salvar Análise
+                      {t('actions.save')}
                     </Button>
                   </div>
                   {results.map((r, i) => (
