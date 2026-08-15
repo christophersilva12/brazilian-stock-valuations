@@ -1,4 +1,5 @@
 import { ValuationResult } from '@/lib/valuation';
+import { formatNumberToBRL } from '@/lib/currency';
 import { TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useI18n } from '@/i18n/i18n';
 
@@ -50,17 +51,17 @@ export function ResultCard({ result, currentPrice, ticker }: ResultCardProps) {
       <div className="grid grid-cols-2 gap-4">
         <MetricBox
           label={t('result.metric.currentPrice')}
-          value={`R$ ${currentPrice.toFixed(2)}`}
+          value={`R$ ${formatNumberToBRL(currentPrice)}`}
           className="text-foreground"
         />
         <MetricBox
           label={t('result.metric.intrinsicValue')}
-          value={`R$ ${result.intrinsicValue.toFixed(2)}`}
+          value={`R$ ${formatNumberToBRL(result.intrinsicValue)}`}
           className="text-accent"
         />
         <MetricBox
           label={t('result.metric.ceilingPrice')}
-          value={`R$ ${result.ceilingPrice.toFixed(2)}`}
+          value={`R$ ${formatNumberToBRL(result.ceilingPrice)}`}
           className={result.ceilingPrice > currentPrice ? 'text-primary' : 'text-destructive'}
         />
         <MetricBox

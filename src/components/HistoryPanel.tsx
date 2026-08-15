@@ -1,4 +1,5 @@
 import { SavedAnalysis, getAnalyses, deleteAnalysis } from '@/lib/valuation';
+import { formatNumberToBRL } from '@/lib/currency';
 import { Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -56,8 +57,8 @@ export function HistoryPanel({ refreshKey }: HistoryPanelProps) {
                 <span className="text-xs text-muted-foreground">{a.method}</span>
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                <span>R$ {a.currentPrice.toFixed(2)}</span>
-                <span>→ {t('history.ceiling')}: R$ {a.result.ceilingPrice.toFixed(2)}</span>
+                <span>R$ {formatNumberToBRL(a.currentPrice)}</span>
+                <span>→ {t('history.ceiling')}: R$ {formatNumberToBRL(a.result.ceilingPrice)}</span>
                 <span className={signalClass[a.result.signal]}>
                   {a.result.upsidePercent > 0 ? '+' : ''}{a.result.upsidePercent.toFixed(1)}%
                 </span>

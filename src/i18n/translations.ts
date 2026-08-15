@@ -116,7 +116,7 @@ export const translations: Record<Lang, Record<string, string>> = {
 
     "fields.price.label": "Cotação Atual",
     "fields.price.tooltip": "Preço atual da ação no mercado",
-    "fields.price.placeholder": "35.50",
+    "fields.price.placeholder": "35,50",
 
     "fields.margin.label": "Margem de Segurança",
     "fields.margin.tooltip": "Percentual de desconto desejado pelo investidor sobre o valor intrínseco. Geralmente entre 20% e 50%.",
@@ -143,11 +143,11 @@ export const translations: Record<Lang, Record<string, string>> = {
     "graham.lpa.label": "LPA (Lucro por Ação)",
     "graham.lpa.tooltip": "Lucro líquido dividido pelo número de ações.",
     "graham.lpa.source": "Investidor10, Fundamentus, Status Invest",
-    "graham.lpa.placeholder": "5.20",
+    "graham.lpa.placeholder": "5,20",
     "graham.vpa.label": "VPA (Valor Patrimonial por Ação)",
     "graham.vpa.tooltip": "Patrimônio líquido dividido pelo número de ações.",
     "graham.vpa.source": "Investidor10 ou balanço da empresa",
-    "graham.vpa.placeholder": "28.00",
+    "graham.vpa.placeholder": "28,00",
 
     "barsi.title": "Método Luiz Barsi",
     "barsi.formula": "Preço Teto = (DY atual / DY desejado) × Cotação",

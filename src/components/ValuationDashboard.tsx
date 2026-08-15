@@ -20,6 +20,7 @@ import {
 } from '@/lib/valuation';
 import { Calculator, History, BarChart3, Save, RotateCcw, Menu } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatNumberToBRL, parseBRL } from '@/lib/currency';
 
 type MethodKey = 'graham' | 'barsi' | 'dcf' | 'lynch';
 
@@ -94,7 +95,7 @@ export default function ValuationDashboard() {
 
       if (name) setCompany((prev) => prev || name);
       const price = parseFloat(open);
-      if (price !== undefined) setCurrentPrice(String(price));
+      if (Number.isFinite(price)) setCurrentPrice(formatNumberToBRL(price));
     } catch (error) {
       console.error('Error fetching ticker data:', error);
       toast.error(t('toast.fetchError'));
@@ -102,7 +103,7 @@ export default function ValuationDashboard() {
   };
 
   const calculate = useCallback(() => {
-    const price = parseFloat(currentPrice);
+    const price = parseBRL(currentPrice);
     const margin = parseFloat(safetyMargin);
     if (!price || !margin) {
       toast.error(t('toast.fillPriceMargin'));
@@ -112,8 +113,8 @@ export default function ValuationDashboard() {
     const newResults: typeof results = [];
 
     if (activeMethod === 'graham') {
-      const l = parseFloat(lpa);
-      const v = parseFloat(vpa);
+      const l = parseBRL(lpa);
+      const v = parseBRL(vpa);
       if (l && v) {
         const r = calculateGraham({ lpa: l, vpa: v, currentPrice: price, safetyMargin: margin });
         newResults.push({ method: 'graham', result: r, currentPrice: price });
@@ -132,7 +133,7 @@ export default function ValuationDashboard() {
     }
 
     if (activeMethod === 'dcf') {
-      const f = parseFloat(fcf);
+      const f = parseBRL(fcf);
       const g = parseFloat(growthRate);
       const d = parseFloat(discountRate);
       const y = parseInt(projectionYears);
@@ -144,7 +145,7 @@ export default function ValuationDashboard() {
     }
 
     if (activeMethod === 'lynch') {
-      const l = parseFloat(lynchLpa);
+      const l = parseBRL(lynchLpa);
       const g = parseFloat(lynchGrowth);
       const pl = parseFloat(lynchPL) || undefined;
       if (l && g) {
@@ -422,7 +423,7 @@ export default function ValuationDashboard() {
                     label="Fluxo de Caixa Livre Atual"
                     tooltip="Dinheiro gerado pela empresa após investimentos operacionais."
                     source="DFC no RI da empresa"
-                    placeholder="1000000000"
+                    placeholder="1.000.000.000"
                     value={fcf}
                     onChange={setFcf}
                     suffix="R$"
@@ -473,7 +474,7 @@ export default function ValuationDashboard() {
                     label="LPA (Lucro por Ação)"
                     tooltip="Lucro líquido dividido pelo número total de ações da empresa."
                     source="Investidor10, Status Invest, Fundamentus"
-                    placeholder="5.20"
+                    placeholder="5,20"
                     value={lynchLpa}
                     onChange={setLynchLpa}
                     suffix="R$"
