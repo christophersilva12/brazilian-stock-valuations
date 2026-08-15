@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { FieldWithTooltip } from '@/components/FieldWithTooltip';
@@ -6,10 +7,8 @@ import { ResultCard } from '@/components/ResultCard';
 import { ComparisonChart } from '@/components/ComparisonChart';
 import { HistoryPanel } from '@/components/HistoryPanel';
 import { MethodInfoCard } from '@/components/MethodInfoCard';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { useI18n } from '@/i18n/i18n';
-import type { Lang } from '@/i18n/translations';
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import {
   calculateGraham,
   calculateBarsi,
@@ -18,7 +17,7 @@ import {
   saveAnalysis,
   ValuationResult,
 } from '@/lib/valuation';
-import { Calculator, History, BarChart3, Save, RotateCcw, Menu } from 'lucide-react';
+import { Calculator, BarChart3, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatNumberToBRL, parseBRL } from '@/lib/currency';
 
@@ -46,7 +45,8 @@ export interface Quotes {
 }
 
 export default function ValuationDashboard() {
-  const { t, lang, setLang } = useI18n();
+  const { t } = useI18n();
+  const [searchParams] = useSearchParams();
   const [ticker, setTicker] = useState('');
   const [company, setCompany] = useState('');
   const [currentPrice, setCurrentPrice] = useState('');
@@ -79,18 +79,17 @@ export default function ValuationDashboard() {
   const [results, setResults] = useState<{ method: string; result: ValuationResult; currentPrice: number }[]>([]);
 
 
-  const handleGetData = async () => {
-    const input = ticker.trim().toUpperCase();
+  const handleGetData = useCallback(async (symbolOverride?: string) => {
+    const input = (symbolOverride ?? ticker).trim().toUpperCase();
     if (!input) return;
-    const cancelled = false;
     try {
       const res = await fetch(
         `https://api.twelvedata.com/quote?symbol=${input}&apikey=${import.meta.env.VITE_TWELVEDATA_KEY}`
       );
       const quote = await res.json();
       
-      if (cancelled || !quote) return;
-      const { name:longName, symbol, open  } = quote as Quotes;
+      if (!quote) return;
+      const { name:longName, open  } = quote as Quotes;
       const name = longName || '';
 
       if (name) setCompany((prev) => prev || name);
@@ -100,7 +99,16 @@ export default function ValuationDashboard() {
       console.error('Error fetching ticker data:', error);
       toast.error(t('toast.fetchError'));
     }
-  };
+  }, [ticker, t]);
+
+  const prefilledTicker = useRef(false);
+  useEffect(() => {
+    const fromQuery = searchParams.get('ticker')?.trim().toUpperCase();
+    if (!fromQuery || prefilledTicker.current) return;
+    prefilledTicker.current = true;
+    setTicker(fromQuery);
+    void handleGetData(fromQuery);
+  }, [searchParams, handleGetData]);
 
   const calculate = useCallback(() => {
     const price = parseBRL(currentPrice);
@@ -197,99 +205,11 @@ export default function ValuationDashboard() {
 
   return (
     <div className="min-h-screen bg-background gradient-mesh">
-      {/* Header */}
-      <header className="border-b border-border/30 bg-card/30 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-row gap-3 sm:items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <BarChart3 className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h1 className="font-semibold text-base tracking-tight">ValorAção</h1>
-              <p className="text-xs text-muted-foreground">{t('common.subtitle')}</p>
-            </div>
-          </div>
-          <div className="hidden sm:flex flex-wrap gap-2 items-center w-full sm:w-auto justify-end">
-            <Button
-              variant={view === 'calc' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setView('calc')}
-              className="gap-1.5 text-xs"
-            >
-              <Calculator className="h-3.5 w-3.5" />
-              {t('common.calculateTab')}
-            </Button>
-            <Button
-              variant={view === 'history' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setView('history')}
-              className="gap-1.5 text-xs"
-            >
-              <History className="h-3.5 w-3.5" />
-              {t('common.historyTab')}
-            </Button>
-            <div className="w-full sm:w-36">
-              <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pt">Português</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Español</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex sm:hidden items-center justify-end">
-            <Sheet>
-              <SheetTrigger>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right">
-                <SheetHeader>
-                  <SheetTitle>Menu</SheetTitle>
-                </SheetHeader>
-                <div className="p-4 space-y-3">
-                  <Button
-                    variant={view === 'calc' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setView('calc')}
-                    className="w-full justify-center gap-1.5 text-xs"
-                  >
-                    <Calculator className="h-3.5 w-3.5" />
-                    {t('common.calculateTab')}
-                  </Button>
-                  <Button
-                    variant={view === 'history' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setView('history')}
-                    className="w-full justify-center gap-1.5 text-xs"
-                  >
-                    <History className="h-3.5 w-3.5" />
-                    {t('common.historyTab')}
-                  </Button>
-                  <div className="w-full">
-                    <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
-                      <SelectTrigger className="h-9 text-xs w-full">
-                        <SelectValue placeholder="Language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pt">Português</SelectItem>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="es">Español</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <SheetFooter />
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        historyActive={view === 'history'}
+        onHistoryClick={() => setView('history')}
+        onCalculateClick={() => setView('calc')}
+      />
 
       <main className="container max-w-6xl mx-auto px-4 py-8">
         {view === 'history' ? (

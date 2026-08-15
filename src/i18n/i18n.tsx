@@ -4,7 +4,7 @@ import { translations, Lang } from "./translations";
 type I18nContextValue = {
   lang: Lang;
   setLang: (l: Lang) => void;
-  t: (key: string) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -25,9 +25,15 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   };
 
   const t = useMemo(() => {
-    return (key: string) => {
+    return (key: string, vars?: Record<string, string | number>) => {
       const dict = translations[lang] || translations.en;
-      return dict[key] ?? translations.en[key] ?? key;
+      let value = dict[key] ?? translations.en[key] ?? key;
+      if (vars) {
+        for (const [name, raw] of Object.entries(vars)) {
+          value = value.replaceAll(`{${name}}`, String(raw));
+        }
+      }
+      return value;
     };
   }, [lang]);
 
