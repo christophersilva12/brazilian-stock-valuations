@@ -1,5 +1,5 @@
-export type QuoteSource = "brapi" | "twelvedata";
-export type FundamentalsSource = "fundamentus" | "brapi" | "twelvedata";
+export type QuoteSource = "brapi";
+export type FundamentalsSource = "fundamentus" | "brapi";
 
 export interface Stock {
   ticker: string;

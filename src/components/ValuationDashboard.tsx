@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { FieldWithTooltip } from '@/components/FieldWithTooltip';
@@ -17,36 +18,18 @@ import {
   saveAnalysis,
   ValuationResult,
 } from '@/lib/valuation';
+import { lookupStock, stockToValuationPrefill, type Stock } from '@/lib/market';
 import { Calculator, BarChart3, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatNumberToBRL, parseBRL } from '@/lib/currency';
+import { parseBRL } from '@/lib/currency';
 
 type MethodKey = 'graham' | 'barsi' | 'dcf' | 'lynch';
-
-export interface Quotes {
-  symbol: string
-  name: string
-  exchange: string
-  mic_code: string
-  currency: string
-  datetime: string
-  timestamp: number
-  last_quote_at: number
-  open: string
-  high: string
-  low: string
-  close: string
-  volume: string
-  previous_close: string
-  change: string
-  percent_change: string
-  average_volume: string
-  is_market_open: boolean
-}
 
 export default function ValuationDashboard() {
   const { t } = useI18n();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const [ticker, setTicker] = useState('');
   const [company, setCompany] = useState('');
   const [currentPrice, setCurrentPrice] = useState('');
@@ -79,36 +62,61 @@ export default function ValuationDashboard() {
   const [results, setResults] = useState<{ method: string; result: ValuationResult; currentPrice: number }[]>([]);
 
 
+  const applyStock = useCallback((stock: Stock) => {
+    const prefill = stockToValuationPrefill(stock);
+    setTicker(prefill.ticker);
+    if (prefill.company) setCompany(prefill.company);
+    if (prefill.currentPrice) setCurrentPrice(prefill.currentPrice);
+    if (prefill.lpa) setLpa(prefill.lpa);
+    if (prefill.vpa) setVpa(prefill.vpa);
+    if (prefill.currentDY) setCurrentDY(prefill.currentDY);
+    if (prefill.lynchLpa) setLynchLpa(prefill.lynchLpa);
+    if (prefill.lynchGrowth) setLynchGrowth(prefill.lynchGrowth);
+    if (prefill.lynchPL) setLynchPL(prefill.lynchPL);
+    if (prefill.totalShares) setTotalShares(prefill.totalShares);
+  }, []);
+
   const handleGetData = useCallback(async (symbolOverride?: string) => {
     const input = (symbolOverride ?? ticker).trim().toUpperCase();
     if (!input) return;
-    try {
-      const res = await fetch(
-        `https://api.twelvedata.com/quote?symbol=${input}&apikey=${import.meta.env.VITE_TWELVEDATA_KEY}`
-      );
-      const quote = await res.json();
-      
-      if (!quote) return;
-      const { name:longName, open  } = quote as Quotes;
-      const name = longName || '';
 
-      if (name) setCompany((prev) => prev || name);
-      const price = parseFloat(open);
-      if (Number.isFinite(price)) setCurrentPrice(formatNumberToBRL(price));
+    const cached = queryClient.getQueryData<Stock[]>(['screener-stocks']);
+    const fromCache = cached?.find((item) => item.ticker === input);
+    if (fromCache) {
+      applyStock(fromCache);
+      return;
+    }
+
+    try {
+      const stock = await lookupStock(input);
+      if (!stock) {
+        toast.error(t('toast.fetchError'));
+        return;
+      }
+      applyStock(stock);
     } catch (error) {
       console.error('Error fetching ticker data:', error);
       toast.error(t('toast.fetchError'));
     }
-  }, [ticker, t]);
+  }, [ticker, t, queryClient, applyStock]);
 
   const prefilledTicker = useRef(false);
   useEffect(() => {
+    if (prefilledTicker.current) return;
+
+    const fromState = (location.state as { stock?: Stock } | null)?.stock;
+    if (fromState?.ticker) {
+      prefilledTicker.current = true;
+      applyStock(fromState);
+      return;
+    }
+
     const fromQuery = searchParams.get('ticker')?.trim().toUpperCase();
-    if (!fromQuery || prefilledTicker.current) return;
+    if (!fromQuery) return;
     prefilledTicker.current = true;
     setTicker(fromQuery);
     void handleGetData(fromQuery);
-  }, [searchParams, handleGetData]);
+  }, [searchParams, location.state, handleGetData, applyStock]);
 
   const calculate = useCallback(() => {
     const price = parseBRL(currentPrice);
@@ -130,10 +138,8 @@ export default function ValuationDashboard() {
     }
 
     if (activeMethod === 'barsi') {
-      console.log(currentDY, desiredDY);
-      const dyAtual = parseFloat(currentDY);
-      const dyDesejado = parseFloat(desiredDY);
-      console.log(dyAtual, dyDesejado);
+      const dyAtual = parseBRL(currentDY);
+      const dyDesejado = parseBRL(desiredDY);
       if (dyAtual && dyDesejado) {
         const r = calculateBarsi({ currentDY: dyAtual, desiredDY: dyDesejado, currentPrice: price, safetyMargin: margin });
         newResults.push({ method: 'barsi', result: r, currentPrice: price });
@@ -142,10 +148,10 @@ export default function ValuationDashboard() {
 
     if (activeMethod === 'dcf') {
       const f = parseBRL(fcf);
-      const g = parseFloat(growthRate);
-      const d = parseFloat(discountRate);
+      const g = parseBRL(growthRate);
+      const d = parseBRL(discountRate);
       const y = parseInt(projectionYears);
-      const s = parseFloat(totalShares);
+      const s = parseBRL(totalShares);
       if (f && g && d && y && s) {
         const r = calculateDCF({ freeCashFlow: f, growthRate: g, discountRate: d, projectionYears: y, totalShares: s, currentPrice: price, safetyMargin: margin });
         newResults.push({ method: 'dcf', result: r, currentPrice: price });
@@ -154,8 +160,8 @@ export default function ValuationDashboard() {
 
     if (activeMethod === 'lynch') {
       const l = parseBRL(lynchLpa);
-      const g = parseFloat(lynchGrowth);
-      const pl = parseFloat(lynchPL) || undefined;
+      const g = parseBRL(lynchGrowth);
+      const pl = parseBRL(lynchPL) || undefined;
       if (l && g) {
         const r = calculatePeterLynch({ lpa: l, growthRate: g, plRatio: pl, currentPrice: price, safetyMargin: margin });
         newResults.push({ method: 'lynch', result: r, currentPrice: price });

@@ -1,11 +1,10 @@
-import { Link } from "react-router-dom";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatMarketCap, formatMultiple, formatPercent, formatPrice, formatRatio } from "@/lib/market";
 import type { ScoredStock, SortKey, SortState } from "@/lib/screener/query";
 import { useI18n } from "@/i18n/i18n";
 import { AdherenceCell } from "./AdherenceCell";
+import { AnalyzeLink } from "./AnalyzeLink";
 import { cn } from "@/lib/utils";
 
 interface StockTableProps {
@@ -97,9 +96,7 @@ export function StockTable({ rows, sort, onSort, showScore }: StockTableProps) {
                   </TableCell>
                 )}
                 <TableCell>
-                  <Button asChild size="sm" variant="outline" className="h-7 text-xs">
-                    <Link to={`/valuation?ticker=${stock.ticker}`}>{t("screener.analyze")}</Link>
-                  </Button>
+                  <AnalyzeLink stock={stock} />
                 </TableCell>
               </TableRow>
             );

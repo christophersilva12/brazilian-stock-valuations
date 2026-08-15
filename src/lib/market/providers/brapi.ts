@@ -71,3 +71,18 @@ export async function listBrapiStocks(): Promise<ListingStock[]> {
 
   return stocks;
 }
+
+export async function searchBrapiStock(ticker: string): Promise<ListingStock | null> {
+  const symbol = ticker.trim().toUpperCase();
+  if (!symbol) return null;
+
+  const url = `${BRAPI_BASE}/quote/list?search=${encodeURIComponent(symbol)}&limit=20`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`brapi search failed (${res.status})`);
+  }
+
+  const data = (await res.json()) as BrapiListResponse;
+  const match = (data.stocks ?? []).find((item) => item.stock.toUpperCase() === symbol);
+  return match ? mapListing(match) : null;
+}

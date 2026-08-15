@@ -1,9 +1,8 @@
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { formatMarketCap, formatMultiple, formatPercent, formatPrice, formatRatio } from "@/lib/market";
 import type { ScoredStock } from "@/lib/screener/query";
 import { useI18n } from "@/i18n/i18n";
 import { AdherenceCell } from "./AdherenceCell";
+import { AnalyzeLink } from "./AnalyzeLink";
 import { cn } from "@/lib/utils";
 
 interface StockCardsProps {
@@ -50,9 +49,7 @@ export function StockCards({ rows, showScore }: StockCardsProps) {
             <div className="flex items-center justify-between gap-3">
               <div className="text-xs text-muted-foreground">{formatMarketCap(stock.marketCap, lang)}</div>
               {showScore && <div className="flex-1 max-w-[140px]"><AdherenceCell score={score} compact /></div>}
-              <Button asChild size="sm" variant="outline" className="h-7 text-xs">
-                <Link to={`/valuation?ticker=${stock.ticker}`}>{t("screener.analyze")}</Link>
-              </Button>
+              <AnalyzeLink stock={stock} />
             </div>
           </article>
         );
