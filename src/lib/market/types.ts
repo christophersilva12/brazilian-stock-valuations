@@ -68,6 +68,11 @@ export interface ListingStock {
 
 export const FINANCIAL_SECTORS = new Set(["Finance"]);
 
+/** B3 odd-lot market: PETR4F, VALE3F, TAEE11F. */
+export function isFractionalTicker(ticker: string): boolean {
+  return /^[A-Z]{4}\d{1,2}F$/.test(ticker.trim().toUpperCase());
+}
+
 export function isFinancialSector(sector: string | null | undefined): boolean {
   return !!sector && FINANCIAL_SECTORS.has(sector);
 }

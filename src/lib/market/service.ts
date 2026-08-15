@@ -1,4 +1,4 @@
-import { mergeStock, type ListingStock, type Stock } from "./types";
+import { isFractionalTicker, mergeStock, type ListingStock, type Stock } from "./types";
 import { listBrapiStocks, searchBrapiStock } from "./providers/brapi";
 import { loadFundamentusFundamentals } from "./providers/fundamentus";
 
@@ -11,7 +11,7 @@ export async function loadScreenerStocks(): Promise<Stock[]> {
   const fundMap = new Map(fundamentals.map((item) => [item.ticker, item]));
 
   return listed
-    .filter((item) => item.price != null && item.price > 0)
+    .filter((item) => item.price != null && item.price > 0 && !isFractionalTicker(item.ticker))
     .map((item) => mergeStock(item, fundMap.get(item.ticker)));
 }
 

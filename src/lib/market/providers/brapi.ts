@@ -1,4 +1,4 @@
-import type { ListingStock } from "../types";
+import { isFractionalTicker, type ListingStock } from "../types";
 
 const BRAPI_BASE = "https://brapi.dev/api";
 const PAGE_SIZE = 100;
@@ -63,7 +63,7 @@ export async function listBrapiStocks(): Promise<ListingStock[]> {
 
   for (const page of [first, ...pages]) {
     for (const item of page.stocks ?? []) {
-      if (!item.stock || seen.has(item.stock)) continue;
+      if (!item.stock || seen.has(item.stock) || isFractionalTicker(item.stock)) continue;
       seen.add(item.stock);
       stocks.push(mapListing(item));
     }

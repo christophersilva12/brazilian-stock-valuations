@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseBRNumber } from "@/lib/market/parse";
-import { computePayoutRatio, mergeStock } from "@/lib/market/types";
+import { computePayoutRatio, isFractionalTicker, mergeStock } from "@/lib/market/types";
 import { parseFundamentusHtml } from "../../vite/fundamentus";
 
 describe("parseBRNumber", () => {
@@ -14,6 +14,16 @@ describe("parseBRNumber", () => {
   it("returns null for empty values", () => {
     expect(parseBRNumber("")).toBeNull();
     expect(parseBRNumber("-")).toBeNull();
+  });
+});
+
+describe("isFractionalTicker", () => {
+  it("detects B3 odd-lot tickers and keeps the regular share", () => {
+    expect(isFractionalTicker("PETR4F")).toBe(true);
+    expect(isFractionalTicker("vale3f")).toBe(true);
+    expect(isFractionalTicker("TAEE11F")).toBe(true);
+    expect(isFractionalTicker("PETR4")).toBe(false);
+    expect(isFractionalTicker("TAEE11")).toBe(false);
   });
 });
 
