@@ -6,7 +6,7 @@ import { useStockHistory } from "@/hooks/useStockHistory";
 import { useI18n } from "@/i18n/i18n";
 import { formatDate, formatPrice, type HistoryRange } from "@/lib/market";
 
-const RANGES: HistoryRange[] = ["6mo", "1y", "5y"];
+const RANGES: HistoryRange[] = ["3mo", "1mo", "5d", "1d"];
 
 interface PriceHistoryChartProps {
   ticker: string;
@@ -14,7 +14,7 @@ interface PriceHistoryChartProps {
 
 export function PriceHistoryChart({ ticker }: PriceHistoryChartProps) {
   const { t, lang } = useI18n();
-  const [range, setRange] = useState<HistoryRange>("1y");
+  const [range, setRange] = useState<HistoryRange>("3mo");
   const { data, isLoading, isError } = useStockHistory(ticker, range);
 
   const chartData = (data ?? []).map((point) => ({

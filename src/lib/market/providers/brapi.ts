@@ -111,7 +111,7 @@ export async function searchBrapiStock(ticker: string): Promise<ListingStock | n
   return match ? mapListing(match) : null;
 }
 
-export type HistoryRange = "6mo" | "1y" | "5y";
+export type HistoryRange = "3mo" | "1mo" | "5d" | "1d";
 
 export interface PricePoint {
   date: number;
@@ -178,7 +178,7 @@ export function mapCashDividends(rows: BrapiCashDividend[] | undefined): CashDiv
     }));
 }
 
-export async function fetchStockHistory(ticker: string, range: HistoryRange = "1y"): Promise<PricePoint[]> {
+export async function fetchStockHistory(ticker: string, range: HistoryRange = "3mo"): Promise<PricePoint[]> {
   const symbol = ticker.trim().toUpperCase();
   if (!symbol) return [];
 

@@ -36,7 +36,7 @@ export default function ValuationDashboard() {
   const [company, setCompany] = useState('');
   const [currentPrice, setCurrentPrice] = useState('');
   const [safetyMargin, setSafetyMargin] = useState('25');
-  const [activeMethod, setActiveMethod] = useState<MethodKey>('graham');
+  const [activeMethod, setActiveMethod] = useState<MethodKey>('dcf');
   const [historyKey, setHistoryKey] = useState(0);
   const [view, setView] = useState<'calc' | 'history'>('calc');
 
@@ -278,14 +278,14 @@ export default function ValuationDashboard() {
               {/* Method tabs */}
               <Tabs value={activeMethod} onValueChange={(v) => setActiveMethod(v as MethodKey)}>
                 <TabsList className="w-full bg-secondary/30 border border-border/30">
+                  <TabsTrigger value="dcf" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                      {t('tabs.dcf')}
+                  </TabsTrigger>
                   <TabsTrigger value="graham" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                     {t('tabs.graham')}
                   </TabsTrigger>
                   <TabsTrigger value="barsi" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                     {t('tabs.barsi')}
-                  </TabsTrigger>
-                  <TabsTrigger value="dcf" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                    {t('tabs.dcf')}
                   </TabsTrigger>
                   <TabsTrigger value="lynch" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                     {t('tabs.lynch')}
