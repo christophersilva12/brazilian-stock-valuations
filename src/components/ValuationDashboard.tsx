@@ -10,6 +10,8 @@ import { DividendsTable } from '@/components/DividendsTable';
 import { HistoryPanel } from '@/components/HistoryPanel';
 import { PriceHistoryChart } from '@/components/PriceHistoryChart';
 import { MethodInfoCard } from '@/components/MethodInfoCard';
+import { DcfPremissasCard, suggestedGrowthRate } from '@/components/DcfPremissasCard';
+import { DcfSettingsModal } from '@/components/DcfSettingsModal';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useI18n } from '@/i18n/i18n';
 import {
@@ -18,10 +20,22 @@ import {
   calculateDCF,
   calculatePeterLynch,
   saveAnalysis,
+  BUFFETT_PERPETUITY_RATE,
   ValuationResult,
 } from '@/lib/valuation';
-import { lookupStock, stockToValuationPrefill, type Stock } from '@/lib/market';
-import { Calculator, BarChart3, Save, RotateCcw } from 'lucide-react';
+import {
+  applyQuoteDetails,
+  fetchQuoteDetails,
+  lookupStock,
+  stockToValuationPrefill,
+  type Stock,
+} from '@/lib/market';
+import {
+  loadDcfSettings,
+  saveDcfSettings,
+  type DcfSettings,
+} from '@/lib/dcf-settings';
+import { Calculator, BarChart3, Save, RotateCcw, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseBRL } from '@/lib/currency';
 
@@ -50,10 +64,14 @@ export default function ValuationDashboard() {
 
   // DCF fields
   const [fcf, setFcf] = useState('');
-  const [growthRate, setGrowthRate] = useState('10');
-  const [discountRate, setDiscountRate] = useState('12');
-  const [projectionYears, setProjectionYears] = useState('10');
+  const [payout, setPayout] = useState('');
+  const [roe, setRoe] = useState('');
+  const [growthRate, setGrowthRate] = useState('');
+  const [discountRate, setDiscountRate] = useState('14');
+  const [projectionYears, setProjectionYears] = useState('3');
   const [totalShares, setTotalShares] = useState('');
+  const [dcfSettings, setDcfSettings] = useState<DcfSettings>(loadDcfSettings);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Lynch fields
   const [lynchLpa, setLynchLpa] = useState('');
@@ -75,8 +93,22 @@ export default function ValuationDashboard() {
     if (prefill.lynchLpa) setLynchLpa(prefill.lynchLpa);
     if (prefill.lynchGrowth) setLynchGrowth(prefill.lynchGrowth);
     if (prefill.lynchPL) setLynchPL(prefill.lynchPL);
+    setPayout(prefill.payoutRatio);
+    setRoe(prefill.roe);
+    setGrowthRate(suggestedGrowthRate(prefill.payoutRatio, prefill.roe));
+    if (prefill.freeCashflow) setFcf(prefill.freeCashflow);
     if (prefill.totalShares) setTotalShares(prefill.totalShares);
   }, []);
+
+  const enrichFromBrapi = useCallback(async (stock: Stock) => {
+    if (stock.freeCashflow != null && stock.sharesOutstanding != null) return;
+    try {
+      const details = await fetchQuoteDetails(stock.ticker);
+      if (details) applyStock(applyQuoteDetails(stock, details));
+    } catch (error) {
+      console.error('Error fetching DCF quote details:', error);
+    }
+  }, [applyStock]);
 
   const handleGetData = useCallback(async (symbolOverride?: string) => {
     const input = (symbolOverride ?? ticker).trim().toUpperCase();
@@ -86,6 +118,7 @@ export default function ValuationDashboard() {
     const fromCache = cached?.find((item) => item.ticker === input);
     if (fromCache) {
       applyStock(fromCache);
+      void enrichFromBrapi(fromCache);
       return;
     }
 
@@ -100,7 +133,7 @@ export default function ValuationDashboard() {
       console.error('Error fetching ticker data:', error);
       toast.error(t('toast.fetchError'));
     }
-  }, [ticker, t, queryClient, applyStock]);
+  }, [ticker, t, queryClient, applyStock, enrichFromBrapi]);
 
   const prefilledTicker = useRef(false);
   useEffect(() => {
@@ -110,6 +143,7 @@ export default function ValuationDashboard() {
     if (fromState?.ticker) {
       prefilledTicker.current = true;
       applyStock(fromState);
+      void enrichFromBrapi(fromState);
       return;
     }
 
@@ -118,7 +152,7 @@ export default function ValuationDashboard() {
     prefilledTicker.current = true;
     setTicker(fromQuery);
     void handleGetData(fromQuery);
-  }, [searchParams, location.state, handleGetData, applyStock]);
+  }, [searchParams, location.state, handleGetData, applyStock, enrichFromBrapi]);
 
   const calculate = useCallback(() => {
     const price = parseBRL(currentPrice);
@@ -154,8 +188,17 @@ export default function ValuationDashboard() {
       const d = parseBRL(discountRate);
       const y = parseInt(projectionYears);
       const s = parseBRL(totalShares);
-      if (f && g && d && y && s) {
-        const r = calculateDCF({ freeCashFlow: f, growthRate: g, discountRate: d, projectionYears: y, totalShares: s, currentPrice: price, safetyMargin: margin });
+      if (f && Number.isFinite(g) && d && y && s) {
+        const r = calculateDCF({
+          freeCashFlow: f,
+          growthRate: g,
+          discountRate: d,
+          projectionYears: y,
+          totalShares: s,
+          currentPrice: price,
+          safetyMargin: margin,
+          perpetuityDiscountRate: dcfSettings.perpetuityMethod === 'buffett' ? BUFFETT_PERPETUITY_RATE : d,
+        });
         newResults.push({ method: 'dcf', result: r, currentPrice: price });
       }
     }
@@ -177,7 +220,7 @@ export default function ValuationDashboard() {
 
     setResults(newResults);
     toast.success(t('toast.calcSuccess'));
-  }, [activeMethod, currentPrice, safetyMargin, lpa, vpa, currentDY, desiredDY, fcf, growthRate, discountRate, projectionYears, totalShares, lynchLpa, lynchGrowth, lynchPL, t]);
+  }, [activeMethod, currentPrice, safetyMargin, lpa, vpa, currentDY, desiredDY, fcf, growthRate, discountRate, projectionYears, totalShares, dcfSettings.perpetuityMethod, lynchLpa, lynchGrowth, lynchPL, t]);
 
   const handleSave = () => {
     if (results.length === 0) return;
@@ -205,10 +248,18 @@ export default function ValuationDashboard() {
     setVpa('');
     setCurrentDY('');
     setFcf('');
+    setPayout('');
+    setRoe('');
+    setGrowthRate('');
     setTotalShares('');
     setLynchLpa('');
     setLynchGrowth('');
     setLynchPL('');
+  };
+
+  const handleApplyDcfSettings = (next: DcfSettings) => {
+    setDcfSettings(next);
+    saveDcfSettings(next);
   };
 
   return (
@@ -344,35 +395,41 @@ export default function ValuationDashboard() {
                 </TabsContent>
 
                 <TabsContent value="dcf" className="glass-card p-6 space-y-4 mt-3">
-                  <h3 className="text-sm font-semibold">Fluxo de Caixa Descontado</h3>
-                  <p className="text-xs text-muted-foreground">Valor presente dos fluxos de caixa futuros</p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-semibold">Fluxo de Caixa Descontado</h3>
+                      <p className="text-xs text-muted-foreground">Valor presente dos fluxos de caixa futuros</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8 border-border/50 shrink-0"
+                      onClick={() => setSettingsOpen(true)}
+                      aria-label={t('dcf.settings.open')}
+                    >
+                      <Settings2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <DcfPremissasCard
+                    payout={payout}
+                    onPayoutChange={setPayout}
+                    roe={roe}
+                    onRoeChange={setRoe}
+                    growthRate={growthRate}
+                    onGrowthRateChange={setGrowthRate}
+                    discountRate={discountRate}
+                    onDiscountRateChange={setDiscountRate}
+                  />
                   <FieldWithTooltip
                     id="fcf"
                     label="Fluxo de Caixa Livre Atual"
                     tooltip="Dinheiro gerado pela empresa após investimentos operacionais."
-                    source="DFC no RI da empresa"
+                    source="brapi.dev"
                     placeholder="1.000.000.000"
                     value={fcf}
                     onChange={setFcf}
                     suffix="R$"
-                  />
-                  <FieldWithTooltip
-                    id="growth"
-                    label="Taxa de Crescimento Anual"
-                    tooltip="Crescimento esperado do fluxo de caixa. Baseado no histórico ou estimativa."
-                    placeholder="10"
-                    value={growthRate}
-                    onChange={setGrowthRate}
-                    suffix="%"
-                  />
-                  <FieldWithTooltip
-                    id="discount"
-                    label="Taxa de Desconto (WACC)"
-                    tooltip="Retorno mínimo esperado pelo investidor. Pode usar a Selic + prêmio de risco."
-                    placeholder="12"
-                    value={discountRate}
-                    onChange={setDiscountRate}
-                    suffix="%"
                   />
                   <FieldWithTooltip
                     id="years"
@@ -386,10 +443,11 @@ export default function ValuationDashboard() {
                     id="shares"
                     label="Número Total de Ações"
                     tooltip="Quantidade de ações em circulação da empresa."
-                    source="Investidor10 ou RI da empresa"
-                    placeholder="5000000000"
+                    source="brapi.dev"
+                    placeholder="1.000.000.000"
                     value={totalShares}
                     onChange={setTotalShares}
+                    currency
                   />
                   <MethodInfoCard method="dcf" />
                 </TabsContent>
@@ -477,6 +535,13 @@ export default function ValuationDashboard() {
           </div>
         )}
       </main>
+
+      <DcfSettingsModal
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        settings={dcfSettings}
+        onApply={handleApplyDcfSettings}
+      />
     </div>
   );
 }

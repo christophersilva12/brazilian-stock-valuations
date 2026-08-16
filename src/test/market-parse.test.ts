@@ -65,6 +65,7 @@ describe("mergeStock", () => {
     expect(stock.price).toBe(42.09);
     expect(stock.fundamentalsSource).toBe("fundamentus");
     expect(stock.payoutRatio).toBeCloseTo(computePayoutRatio(7.05, 4.07) ?? 0);
+    expect(stock.payoutRatio).toBeCloseTo(28.69, 1);
     expect(stock.eps).toBeCloseTo(42.09 / 4.07);
     expect(stock.bookValue).toBeCloseTo(42.09 / 1.13);
   });

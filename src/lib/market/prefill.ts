@@ -12,17 +12,26 @@ export interface ValuationPrefill {
   lynchGrowth: string;
   lynchPL: string;
   totalShares: string;
+  payoutRatio: string;
+  roe: string;
+  freeCashflow: string;
 }
 
 function money(value: number | null | undefined): string {
   return value == null || !Number.isFinite(value) ? "" : formatNumberToBRL(value);
 }
 
+export function formatShareCount(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value) || value <= 0) return "";
+  return formatNumberToBRL(Math.round(value)).replace(/,00$/, "");
+}
+
 export function stockToValuationPrefill(stock: Stock): ValuationPrefill {
   const shares =
-    stock.marketCap != null && stock.price != null && stock.price > 0
+    stock.sharesOutstanding ??
+    (stock.marketCap != null && stock.price != null && stock.price > 0
       ? stock.marketCap / stock.price
-      : null;
+      : null);
 
   return {
     ticker: stock.ticker,
@@ -34,7 +43,10 @@ export function stockToValuationPrefill(stock: Stock): ValuationPrefill {
     lynchLpa: money(stock.eps),
     lynchGrowth: money(stock.revenueGrowth5y),
     lynchPL: money(stock.pe),
-    totalShares: shares != null ? formatNumberToBRL(shares) : "",
+    totalShares: formatShareCount(shares),
+    payoutRatio: money(stock.payoutRatio),
+    roe: money(stock.roe),
+    freeCashflow: money(stock.freeCashflow),
   };
 }
 

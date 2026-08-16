@@ -1,5 +1,5 @@
-import { isFractionalTicker, mergeStock, type ListingStock, type Stock } from "./types";
-import { listBrapiStocks, searchBrapiStock } from "./providers/brapi";
+import { applyQuoteDetails, isFractionalTicker, mergeStock, type ListingStock, type Stock } from "./types";
+import { fetchQuoteDetails, listBrapiStocks, searchBrapiStock } from "./providers/brapi";
 import { loadFundamentusFundamentals } from "./providers/fundamentus";
 
 export async function loadScreenerStocks(): Promise<Stock[]> {
@@ -19,13 +19,14 @@ export async function lookupStock(ticker: string): Promise<Stock | null> {
   const symbol = ticker.trim().toUpperCase();
   if (!symbol) return null;
 
-  const [listing, fundamentals] = await Promise.all([
+  const [listing, fundamentals, details] = await Promise.all([
     searchBrapiStock(symbol).catch(() => null),
     loadFundamentusFundamentals().catch(() => []),
+    fetchQuoteDetails(symbol).catch(() => null),
   ]);
 
   const fund = fundamentals.find((item) => item.ticker === symbol);
-  if (!listing && !fund) return null;
+  if (!listing && !fund && !details) return null;
 
   const fallback: ListingStock = {
     ticker: symbol,
@@ -39,5 +40,6 @@ export async function lookupStock(ticker: string): Promise<Stock | null> {
     logo: listing?.logo ?? null,
   };
 
-  return mergeStock(listing ?? fallback, fund);
+  const stock = mergeStock(listing ?? fallback, fund);
+  return details ? applyQuoteDetails(stock, details) : stock;
 }

@@ -32,6 +32,8 @@ function stock(overrides: Partial<Stock> = {}): Stock {
     eps: 10.34,
     bookValue: 37.25,
     dividendYears: null,
+    freeCashflow: null,
+    sharesOutstanding: null,
     quoteSource: "brapi",
     fundamentalsSource: "fundamentus",
     ...overrides,
@@ -51,6 +53,19 @@ describe("stockToValuationPrefill", () => {
     expect(prefill.lynchPL).toBe("4,07");
     expect(prefill.lynchGrowth).toBe("-2,33");
     expect(prefill.totalShares).toMatch(/13\.549\./);
+    expect(prefill.payoutRatio).toBe("28,70");
+    expect(prefill.roe).toBe("27,73");
+  });
+
+  it("prefers brapi share count and free cash flow when present", () => {
+    const prefill = stockToValuationPrefill(
+      stock({
+        freeCashflow: 85_795_000_000,
+        sharesOutstanding: 12_888_733_000,
+      }),
+    );
+    expect(prefill.freeCashflow).toMatch(/85\.795\./);
+    expect(prefill.totalShares).toBe("12.888.733.000");
   });
 
   it("leaves unknown fields empty", () => {
