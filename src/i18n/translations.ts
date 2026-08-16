@@ -156,7 +156,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     "valuation.range.3mo": "3M",
     "valuation.range.1mo": "1M",
     "valuation.range.5d": "5D",
-    "valuation.range.1d": "1D",
+
 
     "toast.fillPriceMargin": "Fill current price and safety margin.",
     "toast.fillMethodFields": "Fill all fields of the selected method.",
@@ -385,7 +385,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     "valuation.range.3mo": "3M",
     "valuation.range.1mo": "1M",
     "valuation.range.5d": "5D",
-    "valuation.range.1d": "1D",
+
 
     "toast.fillPriceMargin": "Preencha cotação atual e margem de segurança.",
     "toast.fillMethodFields": "Preencha todos os campos do método selecionado.",
@@ -614,7 +614,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     "valuation.range.3mo": "3M",
     "valuation.range.1mo": "1M",
     "valuation.range.5d": "5D",
-    "valuation.range.1d": "1D",
+
 
     "toast.fillPriceMargin": "Complete el precio actual y el margen de seguridad.",
     "toast.fillMethodFields": "Complete todos los campos del método seleccionado.",

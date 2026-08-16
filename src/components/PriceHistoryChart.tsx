@@ -6,7 +6,7 @@ import { useStockHistory } from "@/hooks/useStockHistory";
 import { useI18n } from "@/i18n/i18n";
 import { formatDate, formatPrice, type HistoryRange } from "@/lib/market";
 
-const RANGES: HistoryRange[] = ["3mo", "1mo", "5d", "1d"];
+const RANGES: HistoryRange[] = ["3mo", "1mo", "5d"];
 
 interface PriceHistoryChartProps {
   ticker: string;
