@@ -50,6 +50,19 @@ export function formatMarketCap(value: number | null | undefined, lang: keyof ty
   return `${sign}R$ ${abs.toLocaleString(locale, { maximumFractionDigits: 0 })}`;
 }
 
+export function formatDate(value: string | number | null | undefined, lang: keyof typeof localeMap = "pt"): string {
+  if (value == null || value === "") return "—";
+  const date = typeof value === "number"
+    ? new Date(value > 1e12 ? value : value * 1000)
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString(localeMap[lang], {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 export function formatRatio(value: number | null | undefined, lang: keyof typeof localeMap = "pt"): string {
   if (value == null || !Number.isFinite(value)) return "—";
   return value.toLocaleString(localeMap[lang], {

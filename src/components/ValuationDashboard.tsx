@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { FieldWithTooltip } from '@/components/FieldWithTooltip';
 import { ResultCard } from '@/components/ResultCard';
 import { ComparisonChart } from '@/components/ComparisonChart';
+import { DividendsTable } from '@/components/DividendsTable';
 import { HistoryPanel } from '@/components/HistoryPanel';
+import { PriceHistoryChart } from '@/components/PriceHistoryChart';
 import { MethodInfoCard } from '@/components/MethodInfoCard';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useI18n } from '@/i18n/i18n';
@@ -442,8 +444,14 @@ export default function ValuationDashboard() {
 
             {/* Results */}
             <div className="lg:col-span-3 space-y-6">
+              {ticker && (
+                <>
+                  <PriceHistoryChart ticker={ticker} />
+                  <DividendsTable ticker={ticker} />
+                </>
+              )}
               {results.length === 0 ? (
-                <div className="glass-card p-16 text-center">
+                <div className={`glass-card text-center ${ticker ? 'p-8' : 'p-16'}`}>
                   <BarChart3 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
                   <p className="text-muted-foreground text-sm">
                     {t('results.empty')}
