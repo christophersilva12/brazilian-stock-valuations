@@ -1,7 +1,7 @@
-import ValuationDashboard from '@/components/ValuationDashboard';
+import { StockScreener } from '@/components/screener/StockScreener';
 
 const Index = () => {
-  return <ValuationDashboard />;
+  return <StockScreener />;
 };
 
 export default Index;

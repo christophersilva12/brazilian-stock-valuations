@@ -1,15 +1,17 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { FieldWithTooltip } from '@/components/FieldWithTooltip';
 import { ResultCard } from '@/components/ResultCard';
 import { ComparisonChart } from '@/components/ComparisonChart';
+import { DividendsTable } from '@/components/DividendsTable';
 import { HistoryPanel } from '@/components/HistoryPanel';
+import { PriceHistoryChart } from '@/components/PriceHistoryChart';
 import { MethodInfoCard } from '@/components/MethodInfoCard';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { useI18n } from '@/i18n/i18n';
-import type { Lang } from '@/i18n/translations';
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '@/components/ui/sheet';
 import {
   calculateGraham,
   calculateBarsi,
@@ -18,39 +20,23 @@ import {
   saveAnalysis,
   ValuationResult,
 } from '@/lib/valuation';
-import { Calculator, History, BarChart3, Save, RotateCcw, Menu } from 'lucide-react';
+import { lookupStock, stockToValuationPrefill, type Stock } from '@/lib/market';
+import { Calculator, BarChart3, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { parseBRL } from '@/lib/currency';
 
 type MethodKey = 'graham' | 'barsi' | 'dcf' | 'lynch';
 
-export interface Quotes {
-  symbol: string
-  name: string
-  exchange: string
-  mic_code: string
-  currency: string
-  datetime: string
-  timestamp: number
-  last_quote_at: number
-  open: string
-  high: string
-  low: string
-  close: string
-  volume: string
-  previous_close: string
-  change: string
-  percent_change: string
-  average_volume: string
-  is_market_open: boolean
-}
-
 export default function ValuationDashboard() {
-  const { t, lang, setLang } = useI18n();
+  const { t } = useI18n();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const [ticker, setTicker] = useState('');
   const [company, setCompany] = useState('');
   const [currentPrice, setCurrentPrice] = useState('');
   const [safetyMargin, setSafetyMargin] = useState('25');
-  const [activeMethod, setActiveMethod] = useState<MethodKey>('graham');
+  const [activeMethod, setActiveMethod] = useState<MethodKey>('dcf');
   const [historyKey, setHistoryKey] = useState(0);
   const [view, setView] = useState<'calc' | 'history'>('calc');
 
@@ -78,31 +64,64 @@ export default function ValuationDashboard() {
   const [results, setResults] = useState<{ method: string; result: ValuationResult; currentPrice: number }[]>([]);
 
 
-  const handleGetData = async () => {
-    const input = ticker.trim().toUpperCase();
-    if (!input) return;
-    const cancelled = false;
-    try {
-      const res = await fetch(
-        `https://api.twelvedata.com/quote?symbol=${input}&apikey=${import.meta.env.VITE_TWELVEDATA_KEY}`
-      );
-      const quote = await res.json();
-      
-      if (cancelled || !quote) return;
-      const { name:longName, symbol, open  } = quote as Quotes;
-      const name = longName || '';
+  const applyStock = useCallback((stock: Stock) => {
+    const prefill = stockToValuationPrefill(stock);
+    setTicker(prefill.ticker);
+    if (prefill.company) setCompany(prefill.company);
+    if (prefill.currentPrice) setCurrentPrice(prefill.currentPrice);
+    if (prefill.lpa) setLpa(prefill.lpa);
+    if (prefill.vpa) setVpa(prefill.vpa);
+    if (prefill.currentDY) setCurrentDY(prefill.currentDY);
+    if (prefill.lynchLpa) setLynchLpa(prefill.lynchLpa);
+    if (prefill.lynchGrowth) setLynchGrowth(prefill.lynchGrowth);
+    if (prefill.lynchPL) setLynchPL(prefill.lynchPL);
+    if (prefill.totalShares) setTotalShares(prefill.totalShares);
+  }, []);
 
-      if (name) setCompany((prev) => prev || name);
-      const price = parseFloat(open);
-      if (price !== undefined) setCurrentPrice(String(price));
+  const handleGetData = useCallback(async (symbolOverride?: string) => {
+    const input = (symbolOverride ?? ticker).trim().toUpperCase();
+    if (!input) return;
+
+    const cached = queryClient.getQueryData<Stock[]>(['screener-stocks']);
+    const fromCache = cached?.find((item) => item.ticker === input);
+    if (fromCache) {
+      applyStock(fromCache);
+      return;
+    }
+
+    try {
+      const stock = await lookupStock(input);
+      if (!stock) {
+        toast.error(t('toast.fetchError'));
+        return;
+      }
+      applyStock(stock);
     } catch (error) {
       console.error('Error fetching ticker data:', error);
       toast.error(t('toast.fetchError'));
     }
-  };
+  }, [ticker, t, queryClient, applyStock]);
+
+  const prefilledTicker = useRef(false);
+  useEffect(() => {
+    if (prefilledTicker.current) return;
+
+    const fromState = (location.state as { stock?: Stock } | null)?.stock;
+    if (fromState?.ticker) {
+      prefilledTicker.current = true;
+      applyStock(fromState);
+      return;
+    }
+
+    const fromQuery = searchParams.get('ticker')?.trim().toUpperCase();
+    if (!fromQuery) return;
+    prefilledTicker.current = true;
+    setTicker(fromQuery);
+    void handleGetData(fromQuery);
+  }, [searchParams, location.state, handleGetData, applyStock]);
 
   const calculate = useCallback(() => {
-    const price = parseFloat(currentPrice);
+    const price = parseBRL(currentPrice);
     const margin = parseFloat(safetyMargin);
     if (!price || !margin) {
       toast.error(t('toast.fillPriceMargin'));
@@ -112,8 +131,8 @@ export default function ValuationDashboard() {
     const newResults: typeof results = [];
 
     if (activeMethod === 'graham') {
-      const l = parseFloat(lpa);
-      const v = parseFloat(vpa);
+      const l = parseBRL(lpa);
+      const v = parseBRL(vpa);
       if (l && v) {
         const r = calculateGraham({ lpa: l, vpa: v, currentPrice: price, safetyMargin: margin });
         newResults.push({ method: 'graham', result: r, currentPrice: price });
@@ -121,10 +140,8 @@ export default function ValuationDashboard() {
     }
 
     if (activeMethod === 'barsi') {
-      console.log(currentDY, desiredDY);
-      const dyAtual = parseFloat(currentDY);
-      const dyDesejado = parseFloat(desiredDY);
-      console.log(dyAtual, dyDesejado);
+      const dyAtual = parseBRL(currentDY);
+      const dyDesejado = parseBRL(desiredDY);
       if (dyAtual && dyDesejado) {
         const r = calculateBarsi({ currentDY: dyAtual, desiredDY: dyDesejado, currentPrice: price, safetyMargin: margin });
         newResults.push({ method: 'barsi', result: r, currentPrice: price });
@@ -132,11 +149,11 @@ export default function ValuationDashboard() {
     }
 
     if (activeMethod === 'dcf') {
-      const f = parseFloat(fcf);
-      const g = parseFloat(growthRate);
-      const d = parseFloat(discountRate);
+      const f = parseBRL(fcf);
+      const g = parseBRL(growthRate);
+      const d = parseBRL(discountRate);
       const y = parseInt(projectionYears);
-      const s = parseFloat(totalShares);
+      const s = parseBRL(totalShares);
       if (f && g && d && y && s) {
         const r = calculateDCF({ freeCashFlow: f, growthRate: g, discountRate: d, projectionYears: y, totalShares: s, currentPrice: price, safetyMargin: margin });
         newResults.push({ method: 'dcf', result: r, currentPrice: price });
@@ -144,9 +161,9 @@ export default function ValuationDashboard() {
     }
 
     if (activeMethod === 'lynch') {
-      const l = parseFloat(lynchLpa);
-      const g = parseFloat(lynchGrowth);
-      const pl = parseFloat(lynchPL) || undefined;
+      const l = parseBRL(lynchLpa);
+      const g = parseBRL(lynchGrowth);
+      const pl = parseBRL(lynchPL) || undefined;
       if (l && g) {
         const r = calculatePeterLynch({ lpa: l, growthRate: g, plRatio: pl, currentPrice: price, safetyMargin: margin });
         newResults.push({ method: 'lynch', result: r, currentPrice: price });
@@ -196,99 +213,11 @@ export default function ValuationDashboard() {
 
   return (
     <div className="min-h-screen bg-background gradient-mesh">
-      {/* Header */}
-      <header className="border-b border-border/30 bg-card/30 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container max-w-6xl mx-auto px-4 py-4 flex flex-row gap-3 sm:items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center">
-              <BarChart3 className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h1 className="font-semibold text-base tracking-tight">ValorAção</h1>
-              <p className="text-xs text-muted-foreground">{t('common.subtitle')}</p>
-            </div>
-          </div>
-          <div className="hidden sm:flex flex-wrap gap-2 items-center w-full sm:w-auto justify-end">
-            <Button
-              variant={view === 'calc' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setView('calc')}
-              className="gap-1.5 text-xs"
-            >
-              <Calculator className="h-3.5 w-3.5" />
-              {t('common.calculateTab')}
-            </Button>
-            <Button
-              variant={view === 'history' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => setView('history')}
-              className="gap-1.5 text-xs"
-            >
-              <History className="h-3.5 w-3.5" />
-              {t('common.historyTab')}
-            </Button>
-            <div className="w-full sm:w-36">
-              <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pt">Português</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Español</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex sm:hidden items-center justify-end">
-            <Sheet>
-              <SheetTrigger>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right">
-                <SheetHeader>
-                  <SheetTitle>Menu</SheetTitle>
-                </SheetHeader>
-                <div className="p-4 space-y-3">
-                  <Button
-                    variant={view === 'calc' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setView('calc')}
-                    className="w-full justify-center gap-1.5 text-xs"
-                  >
-                    <Calculator className="h-3.5 w-3.5" />
-                    {t('common.calculateTab')}
-                  </Button>
-                  <Button
-                    variant={view === 'history' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setView('history')}
-                    className="w-full justify-center gap-1.5 text-xs"
-                  >
-                    <History className="h-3.5 w-3.5" />
-                    {t('common.historyTab')}
-                  </Button>
-                  <div className="w-full">
-                    <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
-                      <SelectTrigger className="h-9 text-xs w-full">
-                        <SelectValue placeholder="Language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pt">Português</SelectItem>
-                        <SelectItem value="en">English</SelectItem>
-                        <SelectItem value="es">Español</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <SheetFooter />
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        historyActive={view === 'history'}
+        onHistoryClick={() => setView('history')}
+        onCalculateClick={() => setView('calc')}
+      />
 
       <main className="container max-w-6xl mx-auto px-4 py-8">
         {view === 'history' ? (
@@ -349,14 +278,14 @@ export default function ValuationDashboard() {
               {/* Method tabs */}
               <Tabs value={activeMethod} onValueChange={(v) => setActiveMethod(v as MethodKey)}>
                 <TabsList className="w-full bg-secondary/30 border border-border/30">
+                  <TabsTrigger value="dcf" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+                      {t('tabs.dcf')}
+                  </TabsTrigger>
                   <TabsTrigger value="graham" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                     {t('tabs.graham')}
                   </TabsTrigger>
                   <TabsTrigger value="barsi" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                     {t('tabs.barsi')}
-                  </TabsTrigger>
-                  <TabsTrigger value="dcf" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-                    {t('tabs.dcf')}
                   </TabsTrigger>
                   <TabsTrigger value="lynch" className="flex-1 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
                     {t('tabs.lynch')}
@@ -422,7 +351,7 @@ export default function ValuationDashboard() {
                     label="Fluxo de Caixa Livre Atual"
                     tooltip="Dinheiro gerado pela empresa após investimentos operacionais."
                     source="DFC no RI da empresa"
-                    placeholder="1000000000"
+                    placeholder="1.000.000.000"
                     value={fcf}
                     onChange={setFcf}
                     suffix="R$"
@@ -473,7 +402,7 @@ export default function ValuationDashboard() {
                     label="LPA (Lucro por Ação)"
                     tooltip="Lucro líquido dividido pelo número total de ações da empresa."
                     source="Investidor10, Status Invest, Fundamentus"
-                    placeholder="5.20"
+                    placeholder="5,20"
                     value={lynchLpa}
                     onChange={setLynchLpa}
                     suffix="R$"
@@ -515,8 +444,14 @@ export default function ValuationDashboard() {
 
             {/* Results */}
             <div className="lg:col-span-3 space-y-6">
+              {ticker && (
+                <>
+                  <PriceHistoryChart ticker={ticker} />
+                  <DividendsTable ticker={ticker} />
+                </>
+              )}
               {results.length === 0 ? (
-                <div className="glass-card p-16 text-center">
+                <div className={`glass-card text-center ${ticker ? 'p-8' : 'p-16'}`}>
                   <BarChart3 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
                   <p className="text-muted-foreground text-sm">
                     {t('results.empty')}

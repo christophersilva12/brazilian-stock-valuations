@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, type ChangeEvent } from 'react';
 import { Info } from 'lucide-react';
 import {
   Tooltip,
@@ -6,6 +7,12 @@ import {
 } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  countDigitsBefore,
+  formatBRLInput,
+  mapDigitCursor,
+} from '@/lib/currency';
+import { cn } from '@/lib/utils';
 
 interface FieldWithTooltipProps {
   label: string;
@@ -19,6 +26,7 @@ interface FieldWithTooltipProps {
   suffix?: string;
   disabled?: boolean;
   onBlur?: () => void;
+  currency?: boolean;
 }
 
 export function FieldWithTooltip({
@@ -33,7 +41,45 @@ export function FieldWithTooltip({
   suffix,
   disabled,
   onBlur,
+  currency = suffix === 'R$',
 }: FieldWithTooltipProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cursorRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (currency && cursorRef.current !== null && inputRef.current) {
+      inputRef.current.setSelectionRange(cursorRef.current, cursorRef.current);
+      cursorRef.current = null;
+    }
+  }, [value, currency]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!currency) {
+      onChange(e.target.value);
+      return;
+    }
+
+    const raw = e.target.value;
+    const cursor = e.target.selectionStart ?? raw.length;
+    const formatted = formatBRLInput(raw);
+    const digitsBefore = countDigitsBefore(raw, cursor);
+    const typedSep = raw[cursor - 1] === ',' || raw[cursor - 1] === '.';
+
+    let nextCursor = mapDigitCursor(formatted, digitsBefore);
+    if (typedSep) {
+      const sepPos = formatted.indexOf(',');
+      const integerDigits = countDigitsBefore(formatted, sepPos === -1 ? formatted.length : sepPos);
+      if (sepPos !== -1 && digitsBefore === integerDigits) {
+        nextCursor = sepPos + 1;
+      }
+    }
+
+    cursorRef.current = nextCursor;
+    onChange(formatted);
+  };
+
+  const displayValue = currency ? formatBRLInput(String(value ?? '')) : value;
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
@@ -56,15 +102,21 @@ export function FieldWithTooltip({
       </div>
       <div className="relative">
         <Input
+          ref={inputRef}
           id={id}
-          type={type}
-          step="any"
+          type={currency ? 'text' : type}
+          inputMode={currency ? 'decimal' : undefined}
+          autoComplete={currency ? 'off' : undefined}
+          step={currency ? undefined : 'any'}
           placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={displayValue}
+          onChange={handleChange}
           onBlur={onBlur}
           disabled={disabled}
-          className="bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 font-mono"
+          className={cn(
+            'bg-secondary/50 border-border/50 focus:border-primary/50 focus:ring-primary/20 font-mono',
+            suffix && 'pr-10',
+          )}
         />
         {suffix && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">
