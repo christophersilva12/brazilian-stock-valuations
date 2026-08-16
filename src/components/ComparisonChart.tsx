@@ -1,4 +1,5 @@
 import { ValuationResult } from '@/lib/valuation';
+import { formatNumberToBRL } from '@/lib/currency';
 import {
   BarChart,
   Bar,
@@ -43,7 +44,7 @@ export function ComparisonChart({ results }: ComparisonChartProps) {
             tick={{ fill: 'hsl(215, 20%, 55%)', fontSize: 11 }}
             axisLine={false}
             tickLine={false}
-            tickFormatter={(v) => `R$${v}`}
+            tickFormatter={(v) => `R$ ${formatNumberToBRL(v)}`}
           />
           <Tooltip
             contentStyle={{
@@ -53,14 +54,14 @@ export function ComparisonChart({ results }: ComparisonChartProps) {
               fontSize: 12,
             }}
             labelStyle={{ color: 'hsl(210, 40%, 96%)' }}
-            formatter={(value: number) => [`R$ ${value.toFixed(2)}`, '']}
+            formatter={(value: number) => [`R$ ${formatNumberToBRL(value)}`, '']}
           />
           <ReferenceLine
             y={currentPrice}
             stroke="hsl(190, 90%, 50%)"
             strokeDasharray="5 5"
             label={{
-              value: `Cotação: R$${currentPrice.toFixed(2)}`,
+              value: `Cotação: R$ ${formatNumberToBRL(currentPrice)}`,
               position: 'right',
               fill: 'hsl(190, 90%, 50%)',
               fontSize: 11,
