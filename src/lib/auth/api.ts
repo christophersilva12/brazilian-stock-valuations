@@ -86,6 +86,7 @@ export async function signUpWithProfile(params: {
     password: params.password,
     options: {
       data: { display_name: name },
+      emailRedirectTo: `${window.location.origin}/`,
     },
   });
   if (error) throw new PersistenceError("unknown", error.message);
