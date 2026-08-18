@@ -41,7 +41,6 @@ export function StockScreener() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const visible = useMemo(() => paginate(sorted, currentPage, pageSize), [sorted, currentPage, pageSize]);
-
   const updateQuery = (next: ScreenerQuery) => {
     setQuery(next);
     setPage(1);

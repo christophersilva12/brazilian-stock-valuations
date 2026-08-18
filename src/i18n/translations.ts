@@ -221,6 +221,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     "result.metric.safetyMargin": "Safety Margin",
     "result.potential": "Upside Potential",
 
+    "history.title": "Analysis history",
     "history.empty.title": "No saved analysis yet.",
     "history.empty.subtitle": "Perform a calculation and save to see your history here.",
     "history.ceiling": "Ceiling",
@@ -472,6 +473,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     "result.metric.safetyMargin": "Margem de Segurança",
     "result.potential": "Potencial de Valorização",
 
+    "history.title": "Histórico de Análises",
     "history.empty.title": "Nenhuma análise salva ainda.",
     "history.empty.subtitle": "Realize um cálculo e salve para ver o histórico aqui.",
     "history.ceiling": "Teto",
@@ -723,6 +725,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     "result.metric.safetyMargin": "Margen de Seguridad",
     "result.potential": "Potencial de Valorización",
 
+    "history.title": "Historial de análisis",
     "history.empty.title": "Aún no hay análisis guardados.",
     "history.empty.subtitle": "Realice un cálculo y guarde para ver el historial aquí.",
     "history.ceiling": "Techo",

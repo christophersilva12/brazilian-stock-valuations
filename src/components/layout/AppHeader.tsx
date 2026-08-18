@@ -6,17 +6,12 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger
 import { useI18n } from "@/i18n/i18n";
 import type { Lang } from "@/i18n/translations";
 
-interface AppHeaderProps {
-  historyActive?: boolean;
-  onHistoryClick?: () => void;
-  onCalculateClick?: () => void;
-}
-
-export function AppHeader({ historyActive, onHistoryClick, onCalculateClick }: AppHeaderProps) {
+export function AppHeader() {
   const { t, lang, setLang } = useI18n();
   const location = useLocation();
   const onScreener = location.pathname === "/";
-  const onValuation = location.pathname.startsWith("/valuation") && !historyActive;
+  const onValuation = location.pathname.startsWith("/valuation");
+  const onHistory = location.pathname.startsWith("/history");
 
   const languageSelect = (
     <Select value={lang} onValueChange={(value) => setLang(value as Lang)}>
@@ -50,22 +45,22 @@ export function AppHeader({ historyActive, onHistoryClick, onCalculateClick }: A
         size="sm"
         className={fullWidth ? "w-full justify-center gap-1.5 text-xs" : "gap-1.5 text-xs"}
       >
-        <Link to="/valuation" onClick={onCalculateClick}>
+        <Link to="/valuation">
           <Calculator className="h-3.5 w-3.5" />
           {t("common.calculateTab")}
         </Link>
       </Button>
-      {onHistoryClick && (
-        <Button
-          variant={historyActive ? "secondary" : "ghost"}
-          size="sm"
-          onClick={onHistoryClick}
-          className={fullWidth ? "w-full justify-center gap-1.5 text-xs" : "gap-1.5 text-xs"}
-        >
+      <Button
+        asChild
+        variant={onHistory ? "secondary" : "ghost"}
+        size="sm"
+        className={fullWidth ? "w-full justify-center gap-1.5 text-xs" : "gap-1.5 text-xs"}
+      >
+        <Link to="/history">
           <History className="h-3.5 w-3.5" />
           {t("common.historyTab")}
-        </Button>
-      )}
+        </Link>
+      </Button>
     </>
   );
 

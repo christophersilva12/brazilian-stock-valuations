@@ -7,7 +7,6 @@ import { FieldWithTooltip } from '@/components/FieldWithTooltip';
 import { ResultCard } from '@/components/ResultCard';
 import { ComparisonChart } from '@/components/ComparisonChart';
 import { DividendsTable } from '@/components/DividendsTable';
-import { HistoryPanel } from '@/components/HistoryPanel';
 import { PriceHistoryChart } from '@/components/PriceHistoryChart';
 import { MethodInfoCard } from '@/components/MethodInfoCard';
 import { DcfPremissasCard, suggestedGrowthRate } from '@/components/DcfPremissasCard';
@@ -51,8 +50,6 @@ export default function ValuationDashboard() {
   const [currentPrice, setCurrentPrice] = useState('');
   const [safetyMargin, setSafetyMargin] = useState('25');
   const [activeMethod, setActiveMethod] = useState<MethodKey>('dcf');
-  const [historyKey, setHistoryKey] = useState(0);
-  const [view, setView] = useState<'calc' | 'history'>('calc');
 
   // Graham fields
   const [lpa, setLpa] = useState('');
@@ -235,7 +232,6 @@ export default function ValuationDashboard() {
         currentPrice: r.currentPrice,
       });
     });
-    setHistoryKey((k) => k + 1);
     toast.success(t('toast.saveSuccess'));
   };
 
@@ -264,20 +260,10 @@ export default function ValuationDashboard() {
 
   return (
     <div className="min-h-screen bg-background gradient-mesh">
-      <AppHeader
-        historyActive={view === 'history'}
-        onHistoryClick={() => setView('history')}
-        onCalculateClick={() => setView('calc')}
-      />
+      <AppHeader />
 
       <main className="container max-w-6xl mx-auto px-4 py-8">
-        {view === 'history' ? (
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-lg font-semibold mb-4">Histórico de Análises</h2>
-            <HistoryPanel refreshKey={historyKey} />
-          </div>
-        ) : (
-          <div className="grid lg:grid-cols-5 gap-8">
+        <div className="grid lg:grid-cols-5 gap-8">
             {/* Form */}
             <div className="lg:col-span-2 space-y-6">
               {/* Common fields */}
@@ -533,7 +519,6 @@ export default function ValuationDashboard() {
               )}
             </div>
           </div>
-        )}
       </main>
 
       <DcfSettingsModal
