@@ -3,6 +3,7 @@ import { BarChart3, Calculator, History, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { useI18n } from "@/i18n/i18n";
 import type { Lang } from "@/i18n/translations";
 
@@ -79,8 +80,10 @@ export function AppHeader() {
         <div className="hidden sm:flex flex-wrap gap-2 items-center w-full sm:w-auto justify-end">
           {navButtons()}
           <div className="w-full sm:w-36">{languageSelect}</div>
+          <UserMenu />
         </div>
-        <div className="flex sm:hidden items-center justify-end">
+        <div className="flex sm:hidden items-center justify-end gap-2">
+          <UserMenu />
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="h-9 w-9">
