@@ -89,8 +89,10 @@ export function UserMenu() {
               fileRef.current?.click();
             }}
           >
-            <ImagePlus className="h-4 w-4" />
-            {t("auth.avatar.choose")}
+            <div className="flex items-center gap-2">
+              <ImagePlus className="h-4 w-4" />
+              {t("auth.avatar.choose")}
+            </div>
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={async () => {
@@ -98,8 +100,10 @@ export function UserMenu() {
               toast.success(t("auth.logout"));
             }}
           >
-            <LogOut className="h-4 w-4" />
-            {t("auth.logout")}
+            <div className="flex items-center gap-2">
+              <LogOut className="h-4 w-4" />
+              {t("auth.logout")}
+            </div>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
