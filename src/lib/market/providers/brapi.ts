@@ -1,4 +1,4 @@
-import { isFractionalTicker, type ListingStock } from "../types";
+import { computePayoutRatio, isFractionalTicker, type ListingStock, type QuoteDetails } from "../types";
 
 const BRAPI_BASE = "https://brapi.dev/api";
 const PAGE_SIZE = 100;
@@ -229,4 +229,81 @@ export async function fetchStockDividends(ticker: string): Promise<CashDividend[
   }
 
   return mapCashDividends(data.results?.[0]?.data?.cashDividends);
+}
+
+interface BrapiKeyStatistics {
+  sharesOutstanding?: number | null;
+  marketCap?: number | null;
+  trailingPE?: number | null;
+  dividendYield?: number | null;
+  yield?: number | null;
+}
+
+interface BrapiFinancialData {
+  returnOnEquity?: number | null;
+  freeCashflow?: number | null;
+}
+
+interface BrapiQuoteResult {
+  regularMarketPrice?: number | null;
+  marketCap?: number | null;
+  priceEarnings?: number | null;
+  defaultKeyStatistics?: BrapiKeyStatistics | null;
+  financialData?: BrapiFinancialData | null;
+}
+
+function finiteNumber(value: number | null | undefined): number | null {
+  return value != null && Number.isFinite(value) ? value : null;
+}
+
+/** Converts a decimal ratio (0.18) to percent (18). Leaves values already in percent unchanged. */
+export function ratioToPercent(value: number | null | undefined): number | null {
+  const n = finiteNumber(value);
+  if (n == null) return null;
+  return Math.abs(n) <= 1 ? n * 100 : n;
+}
+
+export function mapQuoteDetails(quote: BrapiQuoteResult | null | undefined): QuoteDetails | null {
+  if (!quote) return null;
+
+  const stats = quote.defaultKeyStatistics ?? {};
+  const financials = quote.financialData ?? {};
+  const price = finiteNumber(quote.regularMarketPrice);
+  const marketCap = finiteNumber(quote.marketCap) ?? finiteNumber(stats.marketCap);
+  const outstanding = finiteNumber(stats.sharesOutstanding);
+  const fromMarketCap = price != null && price > 0 && marketCap != null ? marketCap / price : null;
+
+  const dy = ratioToPercent(stats.dividendYield ?? stats.yield);
+  const pe = finiteNumber(stats.trailingPE) ?? finiteNumber(quote.priceEarnings);
+
+  return {
+    roe: ratioToPercent(financials.returnOnEquity),
+    payoutRatio: computePayoutRatio(dy, pe),
+    freeCashflow: finiteNumber(financials.freeCashflow),
+    sharesOutstanding: outstanding ?? fromMarketCap,
+  };
+}
+
+export async function fetchQuoteDetails(ticker: string): Promise<QuoteDetails | null> {
+  const symbol = ticker.trim().toUpperCase();
+  if (!symbol) return null;
+
+  const url = brapiUrl(`/quote/${encodeURIComponent(symbol)}`, {
+    modules: "defaultKeyStatistics,financialData",
+  });
+  const res = await fetch(url, { headers: brapiHeaders() });
+  if (!res.ok) {
+    throw new Error(`brapi quote details failed (${res.status})`);
+  }
+
+  const data = (await res.json()) as {
+    results?: BrapiQuoteResult[];
+    error?: boolean;
+    message?: string;
+  };
+  if (data.error) {
+    throw new Error(data.message || "brapi quote details error");
+  }
+
+  return mapQuoteDetails(data.results?.[0]);
 }
