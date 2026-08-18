@@ -18,10 +18,16 @@ import {
   calculateBarsi,
   calculateDCF,
   calculatePeterLynch,
-  saveAnalysis,
   BUFFETT_PERPETUITY_RATE,
   ValuationResult,
 } from '@/lib/valuation';
+import { useAuth } from '@/lib/auth/AuthProvider';
+import { createValuation, getValuation, updateValuation } from '@/lib/valuations/api';
+import { mapPersistenceError } from '@/lib/valuations/errors';
+import { buildWritePayload, recordToSnapshot } from '@/lib/valuations/payload';
+import type { FormSnapshot, ValuationRecord } from '@/lib/valuations/types';
+import { SaveValuationDialog } from '@/components/valuations/SaveValuationDialog';
+import { PublicComparisons } from '@/components/valuations/PublicComparisons';
 import {
   applyQuoteDetails,
   fetchQuoteDetails,
@@ -45,6 +51,7 @@ export default function ValuationDashboard() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { user, loading: authLoading, ensureAuth } = useAuth();
   const [ticker, setTicker] = useState('');
   const [company, setCompany] = useState('');
   const [currentPrice, setCurrentPrice] = useState('');
@@ -77,7 +84,80 @@ export default function ValuationDashboard() {
 
   // Results
   const [results, setResults] = useState<{ method: string; result: ValuationResult; currentPrice: number }[]>([]);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [savedPublic, setSavedPublic] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [viewingOther, setViewingOther] = useState<ValuationRecord | null>(null);
 
+
+  const applySnapshot = useCallback((snap: FormSnapshot) => {
+    setTicker(snap.ticker);
+    setCompany(snap.company);
+    setCurrentPrice(snap.currentPrice);
+    setSafetyMargin(snap.safetyMargin);
+    setActiveMethod(snap.activeMethod);
+    setLpa(snap.lpa);
+    setVpa(snap.vpa);
+    setCurrentDY(snap.currentDY);
+    setDesiredDY(snap.desiredDY);
+    setFcf(snap.fcf);
+    setPayout(snap.payout);
+    setRoe(snap.roe);
+    setGrowthRate(snap.growthRate);
+    setDiscountRate(snap.discountRate);
+    setProjectionYears(snap.projectionYears);
+    setTotalShares(snap.totalShares);
+    setDcfSettings({ perpetuityMethod: snap.perpetuityMethod });
+    setLynchLpa(snap.lynchLpa);
+    setLynchGrowth(snap.lynchGrowth);
+    setLynchPL(snap.lynchPL);
+  }, []);
+
+  const applyRecord = useCallback((record: ValuationRecord, currentUserId?: string) => {
+    applySnapshot(recordToSnapshot(record));
+    setResults([{
+      method: record.method,
+      result: record.result,
+      currentPrice: record.inputs.currentPrice,
+    }]);
+    if (currentUserId && record.userId === currentUserId) {
+      setSavedId(record.id);
+      setSavedPublic(record.isPublic);
+      setViewingOther(null);
+    } else {
+      setSavedId(null);
+      setSavedPublic(false);
+      setViewingOther(record);
+    }
+  }, [applySnapshot]);
+
+  const currentSnapshot = useCallback((): FormSnapshot => ({
+    ticker,
+    company,
+    currentPrice,
+    safetyMargin,
+    activeMethod,
+    lpa,
+    vpa,
+    currentDY,
+    desiredDY,
+    fcf,
+    payout,
+    roe,
+    growthRate,
+    discountRate,
+    projectionYears,
+    totalShares,
+    perpetuityMethod: dcfSettings.perpetuityMethod,
+    lynchLpa,
+    lynchGrowth,
+    lynchPL,
+  }), [
+    ticker, company, currentPrice, safetyMargin, activeMethod, lpa, vpa, currentDY, desiredDY,
+    fcf, payout, roe, growthRate, discountRate, projectionYears, totalShares, dcfSettings.perpetuityMethod,
+    lynchLpa, lynchGrowth, lynchPL,
+  ]);
 
   const applyStock = useCallback((stock: Stock) => {
     const prefill = stockToValuationPrefill(stock);
@@ -133,8 +213,34 @@ export default function ValuationDashboard() {
   }, [ticker, t, queryClient, applyStock, enrichFromBrapi]);
 
   const prefilledTicker = useRef(false);
+  const loadedValuation = useRef<string | null>(null);
+
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (!id) {
+      loadedValuation.current = null;
+      return;
+    }
+    if (authLoading) return;
+    if (!user) {
+      void ensureAuth();
+      return;
+    }
+    if (loadedValuation.current === id) return;
+    loadedValuation.current = id;
+    prefilledTicker.current = true;
+
+    void getValuation(id)
+      .then((record) => applyRecord(record, user.id))
+      .catch((error) => {
+        loadedValuation.current = null;
+        toast.error(t(`persist.error.${mapPersistenceError(error).code}`));
+      });
+  }, [searchParams, user, authLoading, ensureAuth, applyRecord, t]);
+
   useEffect(() => {
     if (prefilledTicker.current) return;
+    if (searchParams.get('id')) return;
 
     const fromState = (location.state as { stock?: Stock } | null)?.stock;
     if (fromState?.ticker) {
@@ -219,24 +325,47 @@ export default function ValuationDashboard() {
     toast.success(t('toast.calcSuccess'));
   }, [activeMethod, currentPrice, safetyMargin, lpa, vpa, currentDY, desiredDY, fcf, growthRate, discountRate, projectionYears, totalShares, dcfSettings.perpetuityMethod, lynchLpa, lynchGrowth, lynchPL, t]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (results.length === 0) return;
-    results.forEach((r) => {
-      saveAnalysis({
-        id: crypto.randomUUID(),
-        ticker: ticker.toUpperCase() || 'N/A',
-        company: company || 'N/A',
-        date: new Date().toISOString(),
-        method: r.result.method,
-        result: r.result,
-        currentPrice: r.currentPrice,
+    const authed = await ensureAuth('signup');
+    if (!authed) return;
+    setSaveOpen(true);
+  };
+
+  const persistValuation = async (isPublic: boolean) => {
+    if (results.length === 0) return;
+    setSaving(true);
+    try {
+      const payload = buildWritePayload({
+        snapshot: currentSnapshot(),
+        result: results[0].result,
+        isPublic,
       });
-    });
-    toast.success(t('toast.saveSuccess'));
+      if (savedId) {
+        await updateValuation(savedId, payload);
+        toast.success(t('toast.updated'));
+      } else {
+        const created = await createValuation(payload);
+        setSavedId(created.id);
+        toast.success(t('toast.saveAuth'));
+      }
+      setSavedPublic(isPublic);
+      setViewingOther(null);
+      setSaveOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ['my-valuations'] });
+      void queryClient.invalidateQueries({ queryKey: ['public-valuations'] });
+    } catch (error) {
+      toast.error(t(`persist.error.${mapPersistenceError(error).code}`));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {
     setResults([]);
+    setSavedId(null);
+    setSavedPublic(false);
+    setViewingOther(null);
     setTicker('');
     setCompany('');
     setCurrentPrice('');
@@ -488,6 +617,11 @@ export default function ValuationDashboard() {
 
             {/* Results */}
             <div className="lg:col-span-3 space-y-6">
+              {viewingOther && (
+                <div className="glass-card p-4 text-sm">
+                  {t('compare.viewing', { name: viewingOther.author?.displayName ?? t('common.account') })}
+                </div>
+              )}
               {ticker && (
                 <>
                   <PriceHistoryChart ticker={ticker} />
@@ -504,9 +638,9 @@ export default function ValuationDashboard() {
               ) : (
                 <>
                   <div className="flex justify-end">
-                    <Button variant="outline" size="sm" onClick={handleSave} className="gap-1.5 text-xs border-border/50">
+                    <Button variant="outline" size="sm" onClick={() => void handleSave()} className="gap-1.5 text-xs border-border/50">
                       <Save className="h-3.5 w-3.5" />
-                      {t('actions.save')}
+                      {savedId ? t('actions.update') : t('actions.save')}
                     </Button>
                   </div>
                   {results.map((r, i) => (
@@ -517,9 +651,20 @@ export default function ValuationDashboard() {
                   )}
                 </>
               )}
+              {ticker && <PublicComparisons ticker={ticker} excludeId={savedId ?? viewingOther?.id} />}
             </div>
           </div>
       </main>
+
+      <SaveValuationDialog
+        open={saveOpen}
+        onOpenChange={setSaveOpen}
+        ticker={ticker}
+        valuationId={savedId}
+        initialPublic={savedPublic}
+        saving={saving}
+        onConfirm={persistValuation}
+      />
 
       <DcfSettingsModal
         open={settingsOpen}

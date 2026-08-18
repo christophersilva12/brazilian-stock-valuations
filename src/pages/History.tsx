@@ -9,7 +9,7 @@ const History = () => {
     <div className="min-h-screen bg-background gradient-mesh">
       <AppHeader />
       <main className="container max-w-6xl mx-auto px-4 py-8">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <h2 className="text-lg font-semibold mb-4">{t('history.title')}</h2>
           <HistoryPanel />
         </div>

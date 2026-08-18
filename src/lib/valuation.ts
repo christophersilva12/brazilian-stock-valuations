@@ -167,31 +167,3 @@ function getSignal(currentPrice: number, ceilingPrice: number): 'comprar' | 'neu
   if (currentPrice <= ceilingPrice * 1.1) return 'neutro';
   return 'caro';
 }
-export interface SavedAnalysis {
-  id: string;
-  ticker: string;
-  company: string;
-  date: string;
-  method: string;
-  result: ValuationResult;
-  currentPrice: number;
-}
-
-export function saveAnalysis(analysis: SavedAnalysis) {
-  const saved = getAnalyses();
-  saved.unshift(analysis);
-  localStorage.setItem('valuation-analyses', JSON.stringify(saved.slice(0, 50)));
-}
-
-export function getAnalyses(): SavedAnalysis[] {
-  try {
-    return JSON.parse(localStorage.getItem('valuation-analyses') || '[]');
-  } catch {
-    return [];
-  }
-}
-
-export function deleteAnalysis(id: string) {
-  const saved = getAnalyses().filter(a => a.id !== id);
-  localStorage.setItem('valuation-analyses', JSON.stringify(saved));
-}
