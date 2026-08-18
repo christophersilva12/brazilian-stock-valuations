@@ -20,7 +20,16 @@ export interface DCFInput {
   totalShares: number;
   currentPrice: number;
   safetyMargin: number;
+  /** If omitted, the perpetuity uses the same rate as the projection years. */
+  perpetuityDiscountRate?: number;
 }
+
+/** Sustainable growth: (1 − payout) × ROE. Inputs are percentages. */
+export function expectedGrowthRate(payoutPercent: number, roePercent: number): number {
+  return (1 - payoutPercent / 100) * roePercent;
+}
+
+export const BUFFETT_PERPETUITY_RATE = 10;
 
 export interface PeterLynchInput {
   lpa: number;
@@ -88,6 +97,7 @@ export function calculateBarsi(input: BarsiInput): ValuationResult {
 
 export function calculateDCF(input: DCFInput): ValuationResult {
   const { freeCashFlow, growthRate, discountRate, projectionYears, totalShares, currentPrice, safetyMargin } = input;
+  const perpetuityRate = input.perpetuityDiscountRate ?? discountRate;
   
   let totalPV = 0;
   for (let year = 1; year <= projectionYears; year++) {
@@ -99,8 +109,8 @@ export function calculateDCF(input: DCFInput): ValuationResult {
   // Terminal value (perpetuity growth of 3%)
   const terminalGrowth = 0.03;
   const lastCF = freeCashFlow * Math.pow(1 + growthRate / 100, projectionYears);
-  const terminalValue = (lastCF * (1 + terminalGrowth)) / (discountRate / 100 - terminalGrowth);
-  const pvTerminal = terminalValue / Math.pow(1 + discountRate / 100, projectionYears);
+  const terminalValue = (lastCF * (1 + terminalGrowth)) / (perpetuityRate / 100 - terminalGrowth);
+  const pvTerminal = terminalValue / Math.pow(1 + perpetuityRate / 100, projectionYears);
   totalPV += pvTerminal;
 
   const intrinsicValue = totalShares > 0 ? totalPV / totalShares : 0;

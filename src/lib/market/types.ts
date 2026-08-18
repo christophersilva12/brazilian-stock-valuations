@@ -30,8 +30,17 @@ export interface Stock {
   eps: number | null;
   bookValue: number | null;
   dividendYears: number | null;
+  freeCashflow: number | null;
+  sharesOutstanding: number | null;
   quoteSource: QuoteSource;
   fundamentalsSource: FundamentalsSource | null;
+}
+
+export interface QuoteDetails {
+  roe: number | null;
+  payoutRatio: number | null;
+  freeCashflow: number | null;
+  sharesOutstanding: number | null;
 }
 
 export interface StockFundamentals {
@@ -79,7 +88,7 @@ export function isFinancialSector(sector: string | null | undefined): boolean {
 
 export function computePayoutRatio(dividendYield: number | null, pe: number | null): number | null {
   if (dividendYield == null || pe == null || pe <= 0) return null;
-  return (dividendYield * pe) / 100;
+  return (dividendYield / 100) * pe * 100;
 }
 
 export function derivePerShare(price: number | null, multiple: number | null): number | null {
@@ -122,7 +131,22 @@ export function mergeStock(listing: ListingStock, fundamentals?: StockFundamenta
     eps: derivePerShare(price, pe),
     bookValue: derivePerShare(price, pb),
     dividendYears: null,
+    freeCashflow: null,
+    sharesOutstanding: null,
     quoteSource: "brapi",
     fundamentalsSource: fundamentals ? "fundamentus" : null,
+  };
+}
+
+export function applyQuoteDetails(stock: Stock, details: QuoteDetails): Stock {
+  return {
+    ...stock,
+    roe: details.roe ?? stock.roe,
+    payoutRatio: details.payoutRatio ?? stock.payoutRatio,
+    freeCashflow: details.freeCashflow ?? stock.freeCashflow,
+    sharesOutstanding: details.sharesOutstanding ?? stock.sharesOutstanding,
+    fundamentalsSource: details.roe != null || details.payoutRatio != null
+      ? "brapi"
+      : stock.fundamentalsSource,
   };
 }

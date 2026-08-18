@@ -32,6 +32,8 @@ function stock(overrides: Partial<Stock> = {}): Stock {
     eps: 10,
     bookValue: 38,
     dividendYears: null,
+    freeCashflow: null,
+    sharesOutstanding: null,
     quoteSource: "brapi",
     fundamentalsSource: "fundamentus",
     ...overrides,

@@ -6,10 +6,10 @@ import { useState, useEffect } from 'react';
 import { useI18n } from '@/i18n/i18n';
 
 interface HistoryPanelProps {
-  refreshKey: number;
+  refreshKey?: number;
 }
 
-export function HistoryPanel({ refreshKey }: HistoryPanelProps) {
+export function HistoryPanel({ refreshKey = 0 }: HistoryPanelProps) {
   const { t, lang } = useI18n();
   const [analyses, setAnalyses] = useState<SavedAnalysis[]>([]);
 
